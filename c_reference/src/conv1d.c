@@ -84,7 +84,7 @@ int Conv1D_Depth_LR(float *output_signal, unsigned out_T, const float *input_sig
             }
         }
     }    
-    // free(tempW);
+    free(tempW);
     return 0;
 }
 
