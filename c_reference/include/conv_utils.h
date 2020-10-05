@@ -5,5 +5,7 @@
 #include <float.h>
 
 int prepareLowRankConvMat(float* out, float* W1, float* W2, unsigned rank, unsigned I, unsigned J);
+float sigmoid(float x);
+float relu(float x);
 
 #endif
