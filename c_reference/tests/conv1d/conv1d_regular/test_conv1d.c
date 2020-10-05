@@ -21,7 +21,7 @@ int main(){
         }
     }
     float avg_error = error/(O_T*O_F);
-    printf("%f \t %f  \n", error, avg_error);
+    printf("Squared Error : %f \t ; MSE : %f  \n", error, avg_error);
 
     return 0 ;
 }
