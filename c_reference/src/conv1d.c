@@ -13,9 +13,9 @@ int Conv1D_LR(float *output_signal, unsigned out_T, unsigned out_channels, const
     if(padding == -1){
         padding = kernel_size >> 1;
     }
+    
     float* tempW = (float*)malloc(out_channels * in_channels * kernel_size * sizeof(float)) ;
     prepareLowRankConvMat(tempW, tparams->W1, tparams->W2, tparams->rank, out_channels, in_channels * kernel_size);
-
     // Perform the Convolution
     // input.shape  = [in_T,  in_channels] 
     // output.shape = [out_T, out_channels]
@@ -58,7 +58,7 @@ int Conv1D_Depth_LR(float *output_signal, unsigned out_T, const float *input_sig
     }
 
     float* tempW = (float*)malloc(in_channels * kernel_size * sizeof(float)) ;
-    prepareLowRankConvMat(tempW, tparams->W1, tparams->W2, tparams->rank, in_channels, in_channels * kernel_size);
+    prepareLowRankConvMat(tempW, tparams->W1, tparams->W2, tparams->rank, in_channels, kernel_size);
     // Perform the Convolution
     // input.shape  = [N,  in_T,  in_channels] 
     // output.shape = [N, out_T, in_channels]
@@ -84,7 +84,7 @@ int Conv1D_Depth_LR(float *output_signal, unsigned out_T, const float *input_sig
             }
         }
     }    
-    free(tempW);
+    // free(tempW);
     return 0;
 }
 
