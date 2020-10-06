@@ -204,7 +204,44 @@ int AvgPool1D(float *output_signal, unsigned out_T, const float *input_signal, u
             else{
                 output_signal[t * in_channels + ci] = sum/(float)kernel_size;
             }
-            
+        }
+    }
+    return 0;
+}
+
+int BatchNorm1d(float* output_signal, float* input_signal, unsigned in_T, unsigned in_channels, 
+    float* mean, float* var, unsigned affine, float* gamma , float * beta, unsigned in_place){
+    float eps = 0.00001;
+    if(affine){
+        if(in_place){
+            for(int t = 0; t < in_T ; t++){
+                for(int d = 0 ; d < in_channels ; d++){
+                    input_signal[t * in_channels + d]  = gamma[d]*((input_signal[t * in_channels + d] - mean[d])/sqrt(var[d] + eps)) + beta[d];
+                }
+            }
+        }
+        else{
+            for(int t = 0; t < in_T ; t++){
+                for(int d = 0 ; d < in_channels ; d++){
+                    output_signal[t * in_channels + d] = gamma[d]*((input_signal[t * in_channels + d] - mean[d])/sqrt(var[d] + eps)) + beta[d];
+                }
+            }
+        }
+    }
+    else{
+        if(in_place){
+            for(int t = 0; t < in_T ; t++){
+                for(int d = 0 ; d < in_channels ; d++){
+                    input_signal[t * in_channels + d]  = ((input_signal[t * in_channels + d] - mean[d])/sqrt(var[d] + eps));
+                }
+            }
+        }
+        else{
+            for(int t = 0; t < in_T ; t++){
+                for(int d = 0 ; d < in_channels ; d++){
+                    output_signal[t * in_channels + d] = ((input_signal[t * in_channels + d] - mean[d])/sqrt(var[d] + eps));
+                }
+            }
         }
     }
     return 0;
