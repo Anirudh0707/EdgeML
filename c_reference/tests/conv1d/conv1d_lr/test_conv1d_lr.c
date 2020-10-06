@@ -15,7 +15,7 @@ int main(){
     };
 
     float pred[O_T * O_F] = {};
-    Conv1D_LR(pred, O_T, O_F, INPUT, 1, I_T, I_F, PAD, FILT, &conv_params, ACT);
+    Conv1D_LR(pred, O_T, O_F, INPUT, I_T, I_F, PAD, FILT, &conv_params, ACT);
     float error = 0;
     for(int t = 0 ; t < O_T ; t++){
         for(int d = 0 ; d < I_F ; d++){
