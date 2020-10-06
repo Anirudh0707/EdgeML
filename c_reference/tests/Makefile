@@ -7,7 +7,17 @@ INCLUDE_DIR=../include
 SRC_DIR=../src
 IFLAGS = -I $(INCLUDE_DIR)
 
-all: test_fastgrnn_lr test_rnnpool test_quantized_utils test_quantized_fastgrnn test_quantized_rnnpool test_quantized_mbconv
+all: test_conv1d test_conv1d_depth test_conv1d_lr test_conv1d_lr_depth test_fastgrnn_lr test_rnnpool test_quantized_utils test_quantized_fastgrnn test_quantized_rnnpool test_quantized_mbconv
+
+CONV1D_DIR=conv1d
+test_conv1d: $(CONV1D_DIR)/conv1d_regular/test_conv1d.c $(SRC_DIR)/conv_utils.o $(SRC_DIR)/conv1d.o
+	$(CC) -o $@ $^ $(IFLAGS) $(CFLAGS) -lm
+test_conv1d_depth: $(CONV1D_DIR)/conv1d_depthwise/test_conv1d_depth.c $(SRC_DIR)/conv_utils.o $(SRC_DIR)/conv1d.o
+	$(CC) -o $@ $^ $(IFLAGS) $(CFLAGS) -lm
+test_conv1d_lr: $(CONV1D_DIR)/conv1d_lr/test_conv1d_lr.c $(SRC_DIR)/conv_utils.o $(SRC_DIR)/conv1d.o
+	$(CC) -o $@ $^ $(IFLAGS) $(CFLAGS) -lm
+test_conv1d_lr_depth: $(CONV1D_DIR)/conv1d_lr_depthwise/test_conv1d_lr_depth.c $(SRC_DIR)/conv_utils.o $(SRC_DIR)/conv1d.o
+	$(CC) -o $@ $^ $(IFLAGS) $(CFLAGS) -lm
 
 FASTGRNN_DIR=fastgrnn
 test_fastgrnn_lr: $(FASTGRNN_DIR)/test_fastgrnn_lr.c $(SRC_DIR)/utils.o $(SRC_DIR)/fastgrnn.o $(SRC_DIR)/classifier.o
@@ -32,7 +42,7 @@ test_quantized_mbconv: $(MBCONV_DIR)/test_quantized_mbconv.c $(SRC_DIR)/quantize
 .PHONY: clean cleanest
 
 clean: 
-	rm -f *.o *.gch test_fastgrnn_lr test_rnnpool test_quantized_utils test_quantized_fastgrnn test_quantized_rnnpool
+	rm -f *.o *.gch test_conv1d test_conv1d_depth test_conv1d_lr test_conv1d_lr_depth test_fastgrnn_lr test_rnnpool test_quantized_utils test_quantized_fastgrnn test_quantized_rnnpool test_quantized_mbconv
 
 cleanest: clean
 	rm *~
