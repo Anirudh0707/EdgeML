@@ -21,11 +21,11 @@ typedef struct ConvLayers_Params{
 
 
 int Conv1D(float *output_signal, unsigned out_T, unsigned out_channels, const float *input_signal, 
-    unsigned N, unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size, 
+    unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size, 
     const void* params, int activations);
 
 int Conv1D_Depth(float *output_signal, unsigned out_T, const float *input_signal, 
-    unsigned N, unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size, 
+    unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size, 
     const void* params, int activations);
 
 // Low Rank
@@ -46,15 +46,15 @@ typedef struct ConvLayers_LR_Params{
 } ConvLayers_LR_Params;
 
 int Conv1D_LR(float *output_signal, unsigned out_T, unsigned out_channels, const float *input_signal, 
-    unsigned N, unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size, 
+    unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size, 
     const void* params, int activations);
 
 int Conv1D_Depth_LR(float *output_signal, unsigned out_T, const float *input_signal, 
-    unsigned N, unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size, 
+    unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size, 
     const void* params, int activations);
 
 //Pool
-int AvgPool1D(float *output_signal, unsigned out_T, const float *input_signal, unsigned N, unsigned in_T, unsigned in_channels, 
+int AvgPool1D(float *output_signal, unsigned out_T, const float *input_signal, unsigned in_T, unsigned in_channels, 
     int padding, unsigned kernel_size, int activations);
 
 #endif

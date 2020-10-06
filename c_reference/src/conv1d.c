@@ -5,7 +5,7 @@
 #include<stdio.h>
 
 int Conv1D_LR(float *output_signal, unsigned out_T, unsigned out_channels, const float *input_signal, 
-    unsigned N, unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size, 
+    unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size, 
     const void* params, int activations){
 
     const ConvLayers_LR_Params* tparams= (ConvLayers_LR_Params*) params;
@@ -25,8 +25,10 @@ int Conv1D_LR(float *output_signal, unsigned out_T, unsigned out_channels, const
             float sum = 0;
             for(int tf = 0 ; tf < kernel_size ; tf++ ){
                 for(int ci = 0 ; ci < in_channels ; ci++){
-                    float a = ((((t + tf) < padding) || ((t + tf) >= (in_T + padding))) ? 0 : input_signal[((tf + t) - padding) * in_channels + ci]);
-                    sum += (a * tempW[co * in_channels * kernel_size + ci * kernel_size + tf]);
+                    if(((t + tf) < padding) || ((t + tf) >= (in_T + padding)))
+                        continue;
+                    else
+                        sum += (input_signal[((tf + t) - padding) * in_channels + ci] * tempW[co * in_channels * kernel_size + ci * kernel_size + tf]);
                 }
             }
             if(activations == 1){
@@ -48,7 +50,7 @@ int Conv1D_LR(float *output_signal, unsigned out_T, unsigned out_channels, const
 }
 
 int Conv1D_Depth_LR(float *output_signal, unsigned out_T, const float *input_signal, 
-    unsigned N, unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size, 
+    unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size, 
     const void* params, int activations){
 
     const ConvLayers_LR_Params* tparams= (ConvLayers_LR_Params*) params;
@@ -67,8 +69,10 @@ int Conv1D_Depth_LR(float *output_signal, unsigned out_T, const float *input_sig
         for(int ci = 0; ci < in_channels ; ci++){
             float sum = 0;
             for(int tf = 0 ; tf < kernel_size ; tf++ ){
-                float a = ((((t + tf) < padding) || ((t + tf) >= (in_T + padding))) ? 0 : input_signal[((tf + t) - padding) * in_channels + ci]);
-                sum += (a * tempW[ci * kernel_size + tf]);
+                if(((t + tf) < padding) || ((t + tf) >= (in_T + padding)))
+                    continue;
+                else
+                    sum += (input_signal[((tf + t) - padding) * in_channels + ci] * tempW[ci * kernel_size + tf]);
             }
             if(activations == 1){
                 output_signal[t * in_channels + ci] = sigmoid(sum + tparams->B[ci]);     
@@ -91,7 +95,7 @@ int Conv1D_Depth_LR(float *output_signal, unsigned out_T, const float *input_sig
 
 
 int Conv1D(float *output_signal, unsigned out_T, unsigned out_channels, const float *input_signal, 
-    unsigned N, unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size, 
+    unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size, 
     const void* params, int activations){
 
     const ConvLayers_Params* tparams= (ConvLayers_Params*) params;
@@ -109,8 +113,10 @@ int Conv1D(float *output_signal, unsigned out_T, unsigned out_channels, const fl
             sum = 0;
             for(int tf = 0 ; tf < kernel_size ; tf++ ){
                 for(int ci = 0 ; ci < in_channels ; ci++){
-                    float a = ((((t + tf) < padding) || ((t + tf) >= (in_T + padding))) ? 0 : input_signal[((tf + t) - padding) * in_channels + ci]);
-                    sum += (a * tparams->W[co * in_channels * kernel_size + ci * kernel_size + tf]);
+                    if(((t + tf) < padding) || ((t + tf) >= (in_T + padding)))
+                        continue;
+                    else
+                        sum += (input_signal[((tf + t) - padding) * in_channels + ci] * tparams->W[co * in_channels * kernel_size + ci * kernel_size + tf]);
                 }
             }
             if(activations == 1){
@@ -131,7 +137,7 @@ int Conv1D(float *output_signal, unsigned out_T, unsigned out_channels, const fl
 }
 
 int Conv1D_Depth(float *output_signal, unsigned out_T, const float *input_signal, 
-    unsigned N, unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size, 
+    unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size, 
     const void* params, int activations){
 
     const ConvLayers_Params* tparams= (ConvLayers_Params*) params;
@@ -148,8 +154,10 @@ int Conv1D_Depth(float *output_signal, unsigned out_T, const float *input_signal
         for(int ci = 0; ci < in_channels ; ci++){
             float sum = 0;
             for(int tf = 0 ; tf < kernel_size ; tf++ ){
-                float a = ((((t + tf) < padding) || ((t + tf) >= (in_T + padding))) ? 0 : input_signal[((tf + t) - padding) * in_channels + ci]);
-                sum += (a * tparams->W[ci * kernel_size + tf]);
+                if(((t + tf) < padding) || ((t + tf) >= (in_T + padding)))
+                    continue;
+                else
+                    sum += (input_signal[((tf + t) - padding) * in_channels + ci] * tparams->W[ci * kernel_size + tf]);
             }
             if(activations == 1){
                 output_signal[t * in_channels + ci] = sigmoid(sum + tparams->B[ci]);     
@@ -168,7 +176,7 @@ int Conv1D_Depth(float *output_signal, unsigned out_T, const float *input_signal
     return 0;
 }
 
-int AvgPool1D(float *output_signal, unsigned out_T, const float *input_signal, unsigned N, unsigned in_T, unsigned in_channels, 
+int AvgPool1D(float *output_signal, unsigned out_T, const float *input_signal, unsigned in_T, unsigned in_channels, 
     int padding, unsigned kernel_size, int activations){
     
     if(padding == -1){
@@ -179,7 +187,10 @@ int AvgPool1D(float *output_signal, unsigned out_T, const float *input_signal, u
         for(int ci = 0 ; ci < in_channels; ci++){
             float sum = 0;
             for(int tf = 0; tf < kernel_size ; tf++){
-                sum += ((((t + tf) < padding) || ((t + tf) >= (in_T + padding))) ? 0 : input_signal[((tf + t) - padding) * in_channels + ci]);
+                if(((t + tf) < padding) || ((t + tf) >= (in_T + padding)))
+                    continue;
+                else
+                    sum += (input_signal[((tf + t) - padding) * in_channels + ci]);
             }
             if(activations == 1){
                 output_signal[t * in_channels + ci] = sigmoid(sum);     
