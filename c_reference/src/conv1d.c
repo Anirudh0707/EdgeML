@@ -193,16 +193,16 @@ int AvgPool1D(float *output_signal, unsigned out_T, const float *input_signal, u
                     sum += (input_signal[((tf + t) - padding) * in_channels + ci]);
             }
             if(activations == 1){
-                output_signal[t * in_channels + ci] = sigmoid(sum);     
+                output_signal[t * in_channels + ci] = sigmoid(sum/(float)kernel_size);     
             }
             else if(activations == 2){
-                output_signal[t * in_channels + ci] = tanh(sum);
+                output_signal[t * in_channels + ci] = tanh(sum/(float)kernel_size);
             }
             else if(activations == 3){
-                output_signal[t * in_channels + ci] = relu(sum);
+                output_signal[t * in_channels + ci] = relu(sum/(float)kernel_size);
             }
             else{
-                output_signal[t * in_channels + ci] = sum;
+                output_signal[t * in_channels + ci] = sum/(float)kernel_size;
             }
             
         }
