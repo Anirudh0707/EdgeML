@@ -53,8 +53,10 @@ int Conv1D_Depth_LR(float *output_signal, unsigned out_T, const float *input_sig
     unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size, 
     const void* params, int activations);
 
-//Pool
+// Auxillary Layers
 int AvgPool1D(float *output_signal, unsigned out_T, const float *input_signal, unsigned in_T, unsigned in_channels, 
     int padding, unsigned kernel_size, int activations);
 
+int BatchNorm1d(float* output_signal, float* input_signal, unsigned in_T, unsigned in_channels, 
+    float* mean, float* stddev, unsigned in_place);
 #endif
