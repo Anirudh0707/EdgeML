@@ -6,7 +6,10 @@ include ../config.mk
 INCLUDE_DIR=../include
 IFLAGS = -I $(INCLUDE_DIR)
 
-all: conv1d.o conv_utils.o utils.o fastgrnn.o classifier.o rnnpool.o quantized_utils.o quantized_fastgrnn.o quantized_rnnpool.o quantized_mbconv.o 
+all: dscnn.o conv1d.o conv_utils.o utils.o fastgrnn.o classifier.o rnnpool.o quantized_utils.o quantized_fastgrnn.o quantized_rnnpool.o quantized_mbconv.o 
+
+dscnn.o : dscnn.c
+	$(CC) -o $@ $(IFLAGS) $(CFLAGS) -c $^
 
 conv_utils.o : conv_utils.c
 	$(CC) -o $@ $(IFLAGS) $(CFLAGS) -c $^
