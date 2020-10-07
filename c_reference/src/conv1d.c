@@ -204,7 +204,6 @@ int AvgPool1D(float *output_signal, unsigned out_T, const float *input_signal, u
             else{
                 output_signal[t * in_channels + ci] = sum/(float)kernel_size;
             }
-            
         }
     }
     return 0;
