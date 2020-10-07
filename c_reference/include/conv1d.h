@@ -58,5 +58,5 @@ int AvgPool1D(float *output_signal, unsigned out_T, const float *input_signal, u
     int padding, unsigned kernel_size, int activations);
 
 int BatchNorm1d(float* output_signal, float* input_signal, unsigned in_T, unsigned in_channels, 
-    float* mean, float* stddev, unsigned in_place);
+    float* mean, float* var, unsigned affine, float* gamma , float * beta, unsigned in_place);
 #endif
