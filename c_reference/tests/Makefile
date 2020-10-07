@@ -7,10 +7,12 @@ INCLUDE_DIR=../include
 SRC_DIR=../src
 IFLAGS = -I $(INCLUDE_DIR)
 
-all: test_avg_pool test_conv1d test_conv1d_depth test_conv1d_lr test_conv1d_lr_depth test_dscnn_lr test_fastgrnn_lr test_rnnpool test_quantized_utils test_quantized_fastgrnn test_quantized_rnnpool test_quantized_mbconv
+all: test_avg_pool test_conv1d test_conv1d_depth test_conv1d_lr test_conv1d_lr_depth test_dscnn_lr test_dscnn_lr_depth_point test_fastgrnn_lr test_rnnpool test_quantized_utils test_quantized_fastgrnn test_quantized_rnnpool test_quantized_mbconv
 
 DSCNN_DIR=dscnn
 test_dscnn_lr: $(DSCNN_DIR)/test_dscnn_lr.c $(SRC_DIR)/conv_utils.o $(SRC_DIR)/conv1d.o $(SRC_DIR)/dscnn.o
+	$(CC) -o $@ $^ $(IFLAGS) $(CFLAGS) -lm
+test_dscnn_lr_depth_point : $(DSCNN_DIR)/test_dscnn_lr_depth_point.c $(SRC_DIR)/conv_utils.o $(SRC_DIR)/conv1d.o $(SRC_DIR)/dscnn.o
 	$(CC) -o $@ $^ $(IFLAGS) $(CFLAGS) -lm
 
 CONV1D_DIR=conv1d
@@ -48,7 +50,7 @@ test_quantized_mbconv: $(MBCONV_DIR)/test_quantized_mbconv.c $(SRC_DIR)/quantize
 .PHONY: clean cleanest
 
 clean: 
-	rm -f *.o *.gch test_avg_pool test_conv1d test_conv1d_depth test_conv1d_lr test_conv1d_lr_depth test_dscnn_lr test_fastgrnn_lr test_rnnpool test_quantized_utils test_quantized_fastgrnn test_quantized_rnnpool test_quantized_mbconv
+	rm -f *.o *.gch test_avg_pool test_conv1d test_conv1d_depth test_conv1d_lr test_conv1d_lr_depth test_dscnn_lr test_dscnn_lr_depth_point test_fastgrnn_lr test_rnnpool test_quantized_utils test_quantized_fastgrnn test_quantized_rnnpool test_quantized_mbconv
 
 cleanest: clean
 	rm *~
