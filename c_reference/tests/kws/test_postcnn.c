@@ -1,8 +1,8 @@
 #include<stdio.h>
 #include<stdlib.h>
 
-#include"kws_params.h"
-#include"kws_io.h"
+#include"postcnn_params.h"
+#include"postcnn_io.h"
 #include"conv1d.h"
 #include"dscnn.h"
 #include"conv_utils.h"
