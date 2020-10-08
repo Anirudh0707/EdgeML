@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
 #include"dscnn.h"
 #include"conv1d.h"
 #include"conv_utils.h"
@@ -10,7 +13,7 @@ int DSCNN_LR(float* output_signal, float* input_signal, unsigned in_T, unsigned 
     // BatchNorm
     float* norm_out = (float*)malloc(in_T*in_channels*sizeof(float));
     BatchNorm1d(norm_out, input_signal, in_T, in_channels, 
-    mean, var, affine, gamma, beta, in_place);
+    mean, var, affine, gamma, beta, in_place, 0.00001);
 
     // CNN
     out_T = in_T - cnn_kernel_size + 2*cnn_padding + 1;
@@ -35,10 +38,8 @@ int DSCNN_LR_Point_Depth(float* output_signal, float* input_signal, unsigned in_
 
     // Norm
     in_channels >>= 1;
-    // float* norm_out = (float*)malloc(in_T*in_channels*sizeof(float));
     BatchNorm1d(0, act_out, in_T, in_channels, 
-    mean, var, affine, gamma, beta, in_place);
-    // free(act_out);
+    mean, var, affine, gamma, beta, in_place, 0.00001);
     
     // Depth CNN
     out_T = in_T - depth_cnn_kernel_size + 2*depth_cnn_padding + 1;
@@ -46,7 +47,6 @@ int DSCNN_LR_Point_Depth(float* output_signal, float* input_signal, unsigned in_
     Conv1D_Depth(depth_out, out_T, act_out, 
     in_T, in_channels, depth_cnn_padding, depth_cnn_kernel_size, 
     depth_cnn_params, depth_cnn_activations);
-    // free(norm_out);
     free(act_out);
 
     // Point CNN

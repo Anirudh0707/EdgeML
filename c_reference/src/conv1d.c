@@ -1,8 +1,11 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
 #include"conv1d.h"
 #include"conv_utils.h"
+#include"utils.h"
 #include<stdlib.h>
 #include<math.h>
-#include<stdio.h>
 
 int Conv1D_LR(float *output_signal, unsigned out_T, unsigned out_channels, const float *input_signal, 
     unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size, 
@@ -15,11 +18,8 @@ int Conv1D_LR(float *output_signal, unsigned out_T, unsigned out_channels, const
     }
     
     float* tempW = (float*)malloc(out_channels * in_channels * kernel_size * sizeof(float)) ;
-    prepareLowRankConvMat(tempW, tparams->W1, tparams->W2, tparams->rank, out_channels, in_channels * kernel_size);
+    MatMul(tempW, tparams->W1, tparams->W2, tparams->rank, out_channels, in_channels * kernel_size);
     // Perform the Convolution
-    // input.shape  = [in_T,  in_channels] 
-    // output.shape = [out_T, out_channels]
-    // filter.shape = [out_channels, in_channels, kernel_size]
     for(int t = 0; t < out_T; t++){
         for(int co = 0; co < out_channels ; co++){
             float sum = 0;
@@ -31,6 +31,7 @@ int Conv1D_LR(float *output_signal, unsigned out_T, unsigned out_channels, const
                         sum += (input_signal[((tf + t) - padding) * in_channels + ci] * tempW[co * in_channels * kernel_size + ci * kernel_size + tf]);
                 }
             }
+            // Post-Conv Activations, more activatiosn can be added as per the necessity
             if(activations == 1){
                 output_signal[t * out_channels + co] = sigmoid(sum + tparams->B[co]);     
             }
@@ -60,11 +61,8 @@ int Conv1D_Depth_LR(float *output_signal, unsigned out_T, const float *input_sig
     }
 
     float* tempW = (float*)malloc(in_channels * kernel_size * sizeof(float)) ;
-    prepareLowRankConvMat(tempW, tparams->W1, tparams->W2, tparams->rank, in_channels, kernel_size);
+    MatMul(tempW, tparams->W1, tparams->W2, tparams->rank, in_channels, kernel_size);
     // Perform the Convolution
-    // input.shape  = [N,  in_T,  in_channels] 
-    // output.shape = [N, out_T, in_channels]
-    // filter.shape = [(out)in_channels, in_channels, kernel_size]
     for(int t = 0; t < out_T; t++){
         for(int ci = 0; ci < in_channels ; ci++){
             float sum = 0;
@@ -74,6 +72,7 @@ int Conv1D_Depth_LR(float *output_signal, unsigned out_T, const float *input_sig
                 else
                     sum += (input_signal[((tf + t) - padding) * in_channels + ci] * tempW[ci * kernel_size + tf]);
             }
+            // Post-Conv Activations, more activatiosn can be added as per the necessity
             if(activations == 1){
                 output_signal[t * in_channels + ci] = sigmoid(sum + tparams->B[ci]);     
             }
@@ -105,9 +104,6 @@ int Conv1D(float *output_signal, unsigned out_T, unsigned out_channels, const fl
     }
     float sum;
     // Perform the Convolution
-    // input.shape  = [N,  in_T,  in_channels] 
-    // output.shape = [N, out_T, out_channels]
-    // filter.shape = [out_channels, in_channels, kernel_size]
     for(int t = 0; t < out_T; t++){
         for(int co = 0; co < out_channels ; co++){
             sum = 0;
@@ -119,6 +115,7 @@ int Conv1D(float *output_signal, unsigned out_T, unsigned out_channels, const fl
                         sum += (input_signal[((tf + t) - padding) * in_channels + ci] * tparams->W[co * in_channels * kernel_size + ci * kernel_size + tf]);
                 }
             }
+            // Post-Conv Activations, more activatiosn can be added as per the necessity
             if(activations == 1){
                 output_signal[t * out_channels + co] = sigmoid(sum + tparams->B[co]);     
             }
@@ -147,9 +144,6 @@ int Conv1D_Depth(float *output_signal, unsigned out_T, const float *input_signal
     }
 
     // Perform the Convolution
-    // input.shape  = [N,  in_T,  in_channels] 
-    // output.shape = [N, out_T, in_channels]
-    // filter.shape = [(out)in_channels, in_channels, kernel_size]
     for(int t = 0; t < out_T; t++){
         for(int ci = 0; ci < in_channels ; ci++){
             float sum = 0;
@@ -159,6 +153,7 @@ int Conv1D_Depth(float *output_signal, unsigned out_T, const float *input_signal
                 else
                     sum += (input_signal[((tf + t) - padding) * in_channels + ci] * tparams->W[ci * kernel_size + tf]);
             }
+            // Post-Conv Activations, more activatiosn can be added as per the necessity
             if(activations == 1){
                 output_signal[t * in_channels + ci] = sigmoid(sum + tparams->B[ci]);     
             }
@@ -182,7 +177,7 @@ int AvgPool1D(float *output_signal, unsigned out_T, const float *input_signal, u
     if(padding == -1){
         padding = kernel_size >> 1;
     }
-
+    // Iterate over the time steps and averge them. Similar to Conv1D_Dept with a filter kernel full of ones
     for(int t = 0; t < out_T; t++){
         for(int ci = 0 ; ci < in_channels; ci++){
             float sum = 0;
@@ -210,9 +205,10 @@ int AvgPool1D(float *output_signal, unsigned out_T, const float *input_signal, u
 }
 
 int BatchNorm1d(float* output_signal, float* input_signal, unsigned in_T, unsigned in_channels, 
-    float* mean, float* var, unsigned affine, float* gamma , float * beta, unsigned in_place){
-    float eps = 0.00001;
+    float* mean, float* var, unsigned affine, float* gamma , float * beta, unsigned in_place, float eps){
+    // Check if affine values are learnt
     if(affine){
+        // Check for in place computation
         if(in_place){
             for(int t = 0; t < in_T ; t++){
                 for(int d = 0 ; d < in_channels ; d++){
@@ -229,6 +225,7 @@ int BatchNorm1d(float* output_signal, float* input_signal, unsigned in_T, unsign
         }
     }
     else{
+        // Check for in place computation
         if(in_place){
             for(int t = 0; t < in_T ; t++){
                 for(int d = 0 ; d < in_channels ; d++){
