@@ -1,10 +1,12 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
 #include<stdio.h>
 #include<stdlib.h>
 
 #include"dscnn_param_lr_depth_point.h"
 #include"conv1d.h"
 #include"dscnn.h"
-#include"conv_utils.h"
 
 int main(){
     
@@ -33,7 +35,7 @@ int main(){
     0, POINT_FILT, &point_param, 0, 
     0, POOL_FILT, 0);
 
-    // Calculate Error(Aggregate Squared and Mean Squared)
+    // Calculate Error(Aggregate Squared, Mean Squared and Relative Squared)
     float error = 0;
     float denom = 0;
     for(int t = 0 ; t < O_T ; t++){

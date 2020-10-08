@@ -1,7 +1,11 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
 #include"conv_utils.h"
+#include"utils.h"
 #include <math.h>
 
-int prepareLowRankConvMat(float* out, float* W1, float* W2, unsigned rank, unsigned I, unsigned J){
+int MatMul(float* out, float* W1, float* W2, unsigned rank, unsigned I, unsigned J){
   for(int i = 0 ; i < I; i++){
     for(int j = 0 ; j < J; j++){
         float sum = 0;
@@ -22,13 +26,4 @@ int TanhGate(float* output_signal, float* input_signal, unsigned in_T, unsigned 
     }
   }
   return 0;
-}
-
-float relu(float x) {
-  if (x < 0.0) return 0.0;
-  else return x;
-}
-
-float sigmoid(float x) {
-  return 1.0f / (1.0f + expf(-1.0f * x));
 }

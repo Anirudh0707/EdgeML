@@ -1,10 +1,12 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
 #include<stdio.h>
 #include<stdlib.h>
 
 #include"dscnn_param_lr.h"
 #include"conv1d.h"
 #include"dscnn.h"
-#include"conv_utils.h"
 
 int main(){
     
@@ -23,7 +25,7 @@ int main(){
     0, 0, 0, 0, O_F, 2, FILT,
     &conv_params, 0);
 
-    // Calculate Error(Aggregate Squared and Mean Squared)
+    // Calculate Error(Aggregate Squared, Mean Squared and Relative Squared)
     float error = 0, denom = 0;
     for(int t = 0 ; t < O_T ; t++){
         for(int d = 0 ; d < O_F ; d++){
