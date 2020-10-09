@@ -5,7 +5,6 @@
 #include"postcnn_io.h"
 #include"conv1d.h"
 #include"dscnn.h"
-#include"conv_utils.h"
 
 ConvLayers_Params depth_param_2 = {
         .W = CNN2_DEPTH_W,
@@ -111,7 +110,7 @@ int main(){
     free(cnn4_out);
 
     if(out_T != O_T){
-        printf("Error Error, Estimatd Output and Actual ouput teim axis mis-match");
+        printf("Error, Estimatd Output and Actual ouput teim axis mis-match");
         return 0;
     }
     

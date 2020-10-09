@@ -5,8 +5,6 @@
 #include"rnn_params.h"
 #include"fastgrnn.h"
 #include"utils.h"
-// #include"dscnn.h"
-// #include"conv_utils.h"
 
 int main(){
     
@@ -49,19 +47,11 @@ int main(){
             &RNN_params, &buffers, 0, 0);
         memcpy(pred + (t * O_F), temp_hiddenstate, O_F*sizeof(float));
     }
-
-    // fastgrnn_lr(pred, O_F,
-    //         INPUT, I_F, I_T,
-    //         &RNN_params, &buffers, 0, 0);
-
-    // Calculate Error(Aggregate Squared and Mean Squared)
+    free(temp_hiddenstate);
     float error = 0, denom = 0;
     for(int t = 0 ; t < O_T ; t++){
         for(int d = 0 ; d < O_F ; d++){
             error += ((pred[t * O_F + d] - OUTPUT[t * O_F + d]) * (pred[t * O_F + d] - OUTPUT[t * O_F + d]));
-            // printf("%f  %f\t", pred[t * O_F + d], OUTPUT[t * O_F + d]);
-            // error += ((pred[d] - OUTPUT[t * O_F + d]) * (pred[d] - OUTPUT[t * O_F + d]));
-            // printf("%f  %f\n", pred[d], OUTPUT[t * O_F + d]);
             denom += OUTPUT[t * O_F + d] * OUTPUT[t * O_F + d];
         }
     }
