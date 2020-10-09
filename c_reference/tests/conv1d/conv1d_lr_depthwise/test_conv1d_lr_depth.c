@@ -27,6 +27,6 @@ int main(){
     float avg_error = error/(O_T*I_F);
     printf("Testing Low Rank Depthwise Convolution\n");
     printf("Squared Error : %f \t ; MSE : %f  \n", error, avg_error);
-    printf("Relative Squared Error : %f", error/denom)
+    printf("Relative Squared Error : %f \n", error/denom);
     return 0 ;
 }
