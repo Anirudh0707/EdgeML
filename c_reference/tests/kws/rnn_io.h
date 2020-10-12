@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
 #define I_T 60 
 #define O_T 60 
 #define I_F 400 
