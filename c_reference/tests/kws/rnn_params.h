@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
 #define I_F 400 
 #define O_F 200 
 #define LOW_RANK 50
