@@ -41,10 +41,10 @@ int main(){
     .sigmoid_nu   = sigmoid(F_NU)
     };
 
-    float preComp[O_F] = { 0.0 };
+    float preComp[RNN_O_F] = { 0.0 };
     float tempLRW[LOW_RANK] = { 0.0 };
     float tempLRU[LOW_RANK] = { 0.0 };
-    float normFeatures[I_F] = { 0.0 };
+    float normFeatures[RNN_I_F] = { 0.0 };
     FastGRNN_LR_Buffers buffers = {
         .preComp = preComp,
         .tempLRW = tempLRW,
@@ -53,9 +53,9 @@ int main(){
     };
 
     
-    int fwd_window = 60, hop = 3, bwd_window = 15, rnn_hidden = O_F>>1,out_index = 0; 
+    int fwd_window = 60, hop = 3, bwd_window = 15, rnn_hidden = RNN_O_F>>1,out_index = 0; 
     unsigned out_T = I_T/hop + 1;
-    float pred[O_T * O_F] = {0.0};
+    float pred[O_T * RNN_O_F] = {0.0};
     // int fastgrnn_lr(float* const hiddenState, unsigned hiddenDims,
     // const float* const input, unsigned inputDims, unsigned steps,
     // const void* params, void* buffers, int backward, int normalize);
@@ -64,7 +64,7 @@ int main(){
     // Forward
     for(int t = 0 ; t < fwd_window ; t++){
         fastgrnn_lr(temp_hiddenstate, rnn_hidden,
-            INPUT + (t * I_F) , I_F, 1,
+            INPUT + (t * RNN_I_F) , RNN_I_F, 1,
             &fwd_RNN_params, &buffers, 0, 0);
         if(t % 3==0){
             memcpy(pred + ((out_index++)*2*rnn_hidden), temp_hiddenstate, rnn_hidden*sizeof(float));
@@ -74,7 +74,7 @@ int main(){
     for(int t = hop ; t <= I_T - fwd_window ; t += hop ){
         memset(temp_hiddenstate, 0, rnn_hidden*sizeof(float));
         fastgrnn_lr(temp_hiddenstate, rnn_hidden,
-            INPUT + (t * I_F) , I_F, fwd_window,
+            INPUT + (t * RNN_I_F) , RNN_I_F, fwd_window,
             &fwd_RNN_params, &buffers, 0, 0);
         memcpy(pred + ((out_index++)*2*rnn_hidden), temp_hiddenstate, rnn_hidden*sizeof(float));    
     }
@@ -84,7 +84,7 @@ int main(){
     for(int t = 0 ; t < I_T - bwd_window  ; t += hop ){
         memset(temp_hiddenstate, 0, rnn_hidden*sizeof(float));
         fastgrnn_lr(temp_hiddenstate, rnn_hidden,
-            INPUT + (t * I_F) , I_F, bwd_window,
+            INPUT + (t * RNN_I_F) , RNN_I_F, bwd_window,
             &bwd_RNN_params, &buffers, 1, 0);
         memcpy(pred + ((out_index++)*2*rnn_hidden + rnn_hidden), temp_hiddenstate, rnn_hidden*sizeof(float));
     }
@@ -92,7 +92,7 @@ int main(){
     memset(temp_hiddenstate, 0, rnn_hidden*sizeof(float));
     for(int t = I_T - 1 ; t >= I_T - bwd_window; t--){
         fastgrnn_lr(temp_hiddenstate, rnn_hidden,
-            INPUT + (t * I_F) , I_F, 1,
+            INPUT + (t * RNN_I_F) , RNN_I_F, 1,
             &bwd_RNN_params, &buffers, 0, 0);
         if((t - I_T + 1) % 3 == 0){
             memcpy(pred + ((out_index--)*2*rnn_hidden + rnn_hidden), temp_hiddenstate, rnn_hidden*sizeof(float));
@@ -103,12 +103,12 @@ int main(){
     
     float error = 0, denom = 0;
     for(int t = 0 ; t < out_T ; t++){
-        for(int d = 0 ; d < O_F ; d++){
-            error += ((pred[t * O_F + d] - OUTPUT[t * O_F + d]) * (pred[t * O_F + d] - OUTPUT[t * O_F + d]));
-            denom += OUTPUT[t * O_F + d] * OUTPUT[t * O_F + d];
+        for(int d = 0 ; d < RNN_O_F ; d++){
+            error += ((pred[t * RNN_O_F + d] - OUTPUT[t * RNN_O_F + d]) * (pred[t * RNN_O_F + d] - OUTPUT[t * RNN_O_F + d]));
+            denom += OUTPUT[t * RNN_O_F + d] * OUTPUT[t * RNN_O_F + d];
         }
     }
-    float avg_error = error/(O_T*O_F);
+    float avg_error = error/(O_T * RNN_O_F);
     printf("RNN Fully-Bricked Block\n");
     printf("Aggregate Squared Error : %f   ;   Mean Sqaured Error : %f  \n", error, avg_error);
     printf("RMS : %f \n", error/denom);

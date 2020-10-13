@@ -1,12 +1,10 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license.
 
-#define I_T 101 
-#define O_T 97 
-#define I_F 400 
-#define O_F 41 
+#define POST_CNN_I_F 400 
+#define POST_CNN_O_F 41 
 #define DEPTH_FILT 5 
-#define POOL_FILT 2 
+#define POST_CNN_POOL 2 
 #define POINT_FILT 1
 #define LOW_RANK 50
 
