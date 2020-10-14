@@ -5,7 +5,7 @@
 #include<stdlib.h>
 #include<string.h>
 
-#include"keyword_spotting_io_1.h"
+#include"keyword_spotting_io_2.h"
 #include"precnn_params.h"
 #include"rnn_params.h"
 #include"postcnn_params.h"
@@ -15,7 +15,30 @@
 #include"fastgrnn.h"
 #include"utils.h"
 
-// Under Dev
+
+// Check out time with GD
+int checkTime(unsigned out_T){
+    if(out_T != O_T){
+        printf("Error, Estimated Output and Actual ouput time axis mis-match");
+        return 1;
+    }
+    return 0;
+}
+// Error Check
+void checkError(float* pred, float* label){
+    float error = 0, denom = 0;
+    for(int t = 0 ; t < O_T ; t++){
+        for(int d = 0 ; d < POST_CNN_O_F ; d++){
+            error += ((pred[t * POST_CNN_O_F + d] - label[t * POST_CNN_O_F + d]) * (pred[t * POST_CNN_O_F + d] - label[t * POST_CNN_O_F + d]));
+            denom += label[t * POST_CNN_O_F + d] * label[t * POST_CNN_O_F + d];
+        }
+    }
+    float avg_error = error/(O_T*POST_CNN_O_F);
+    printf("Full Network\n");
+    printf("Aggregate Squared Error : %f   ;   Mean Sqaured Error : %f  \n", error, avg_error);
+    printf("Denominator for RMSE : %f \n", denom);
+    printf("RMSE : %f \n", error/denom);
+}
 void key_word_spotting(float* mem_buf){
 
     ConvLayers_LR_Params conv_params = {
@@ -127,13 +150,13 @@ void key_word_spotting(float* mem_buf){
     BatchNorm1d(0, cnn1_out, in_T, PRE_CNN_O_F, 
         BNORM_RNN_MEAN, BNORM_RNN_VAR, 0, 0, 0, 1, 0.00001); // Inplace activation
 
-    /* RNN */
+    /* Bricked Bi-FastGRNN Block */
     int fwd_window = 60, hop = 3, bwd_window = 15, rnn_hidden = RNN_O_F>>1, out_index = 0;
  
     out_T = in_T/hop + 1;
     float* temp_hiddenstate = (float*)calloc(rnn_hidden, sizeof(float));
     float* rnn_out = (float*)malloc(out_T * RNN_O_F * sizeof(float));
-    // Forward
+    // Forward Pass
     for(int t = 0 ; t < fwd_window ; t++){
         fastgrnn_lr(temp_hiddenstate, rnn_hidden,
             cnn1_out + (t * RNN_I_F) , RNN_I_F, 1,
@@ -151,7 +174,7 @@ void key_word_spotting(float* mem_buf){
         memcpy(rnn_out + ((out_index++)*RNN_O_F), temp_hiddenstate, rnn_hidden*sizeof(float));    
     }
 
-    // Backward
+    // Backward Pass
     out_index = 0;
     for(int t = 0 ; t < in_T - bwd_window  ; t += hop ){
         memset(temp_hiddenstate, 0, rnn_hidden*sizeof(float));
@@ -224,25 +247,14 @@ void key_word_spotting(float* mem_buf){
         POST_CNN_POOL_PAD, POST_CNN_POOL, POST_CNN_POOL_ACT);
     free(cnn4_out);
 
-    if(out_T != O_T){
-        printf("Error, Estimated Output and Actual ouput time axis mis-match");
+    // Check
+    if(checkTime(out_T)){
         return;
     }
-
-    // Error Check
-    float error = 0, denom = 0;
-    for(int t = 0 ; t < out_T ; t++){
-        for(int d = 0 ; d < POST_CNN_O_F ; d++){
-            error += ((pred[t * POST_CNN_O_F + d] - OUTPUT[t * POST_CNN_O_F + d]) * (pred[t * POST_CNN_O_F + d] - OUTPUT[t * POST_CNN_O_F + d]));
-            denom += OUTPUT[t * POST_CNN_O_F + d] * OUTPUT[t * POST_CNN_O_F + d];
-        }
+    else{
+        checkError(pred, OUTPUT);
     }
-    
-    float avg_error = error/(O_T*POST_CNN_O_F);
-    printf("Full Network\n");
-    printf("Aggregate Squared Error : %f   ;   Mean Sqaured Error : %f  \n", error, avg_error);
-    printf("Denominator for RMSE : %f \n", denom);
-    printf("RMSE : %f \n", error/denom);
+    free(pred);
 }
 
 int main(){
