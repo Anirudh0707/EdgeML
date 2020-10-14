@@ -1,6 +1,5 @@
 # Set the default behavior, in case people don't have core.autocrlf set.
 * text=auto
-
 # Explicitly declare text files you want to always be normalized and converted
 # to native line endings on checkout.
 *.c text
@@ -11,17 +10,14 @@
 *.hh text
 *.mk text
 *.md text
-
 # Declare files that will always have CRLF line endings on checkout.
 *.sln text eol=crlf
 *.vcxproj text eol=crlf
-
 # Denote all files that are truly binary and should not be modified.
 *.png binary
 *.jpg binary
 *.pdf binary
 *.ipynb binary
-
 c_reference/models/q_scut_head_b_face3_model/mbconv1.h filter=lfs diff=lfs merge=lfs -text
 c_reference/models/q_scut_head_b_face3_model/mbconv3.h filter=lfs diff=lfs merge=lfs -text
 c_reference/models/q_scut_head_b_face3_model/mbconv4.h filter=lfs diff=lfs merge=lfs -text
@@ -53,3 +49,16 @@ c_reference/models/q_scut_head_b_face2_model/mbconv13.h filter=lfs diff=lfs merg
 c_reference/models/q_scut_head_b_face2_model/mbconv1.h filter=lfs diff=lfs merge=lfs -text
 c_reference/models/q_scut_head_b_face2_model/detection2.h filter=lfs diff=lfs merge=lfs -text
 c_reference/models/q_scut_head_b_face2_model/mbconv12.h filter=lfs diff=lfs merge=lfs -text
+c_reference/tests/kws/keyword_spotting_io_1.h filter=lfs diff=lfs merge=lfs -text
+c_reference/tests/kws/keyword_spotting_io_2.h filter=lfs diff=lfs merge=lfs -text
+c_reference/tests/kws/keyword_spotting_io_3.h filter=lfs diff=lfs merge=lfs -text
+c_reference/tests/conv1d/avg_pool/avg_io.h filter=lfs diff=lfs merge=lfs -text
+c_reference/tests/conv1d/conv1d_regular/conv_param.h filter=lfs diff=lfs merge=lfs -text
+c_reference/tests/conv1d/conv1d_lr/conv_param_lr.h filter=lfs diff=lfs merge=lfs -text
+c_reference/tests/conv1d/conv1d_lr_depthwise/conv_param_lr_depth.h filter=lfs diff=lfs merge=lfs -text
+c_reference/tests/conv1d/conv1d_depthwise/conv_param_depth.h filter=lfs diff=lfs merge=lfs -text
+c_reference/tests/kws/precnn_params.h filter=lfs diff=lfs merge=lfs -text
+c_reference/tests/kws/postcnn_params.h filter=lfs diff=lfs merge=lfs -text
+c_reference/tests/kws/rnn_params.h filter=lfs diff=lfs merge=lfs -text
+c_reference/tests/dscnn/dscnn_param_lr.h filter=lfs diff=lfs merge=lfs -text
+c_reference/tests/dscnn/dscnn_param_lr_depth_point.h filter=lfs diff=lfs merge=lfs -text
