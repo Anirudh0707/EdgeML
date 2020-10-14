@@ -4,6 +4,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
+#include <time.h>
 
 #include"keyword_spotting_io_2.h"
 #include"precnn_params.h"
@@ -16,7 +17,7 @@
 #include"utils.h"
 
 
-// Check out time with GD
+// Check out time steps with label time steps
 int checkTime(unsigned out_T){
     if(out_T != O_T){
         printf("Error, Estimated Output and Actual ouput time axis mis-match");
@@ -148,7 +149,7 @@ void key_word_spotting(float* mem_buf){
         &conv_params, PRE_CNN_FILT_ACT); // regular tanh activation
 
     BatchNorm1d(0, cnn1_out, in_T, PRE_CNN_O_F, 
-        BNORM_RNN_MEAN, BNORM_RNN_VAR, 0, 0, 0, 1, 0.00001); // Inplace activation
+        BNORM_RNN_MEAN, BNORM_RNN_VAR, 0, 0, 0, 1, 0.00001); // Inplace computation
 
     /* Bricked Bi-FastGRNN Block */
     int fwd_window = 60, hop = 3, bwd_window = 15, rnn_hidden = RNN_O_F>>1, out_index = 0;
@@ -258,8 +259,13 @@ void key_word_spotting(float* mem_buf){
 }
 
 int main(){
-    
+
+    clock_t begin = clock();
     key_word_spotting(INPUT);
+    clock_t end = clock();
+    double time_spent = (float)(end - begin) / CLOCKS_PER_SEC;
+    printf("Time elapsed is %f seconds\n", time_spent);
+    
 
     return 0 ;
 }
