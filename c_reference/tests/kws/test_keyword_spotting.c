@@ -16,7 +16,7 @@
 #include"utils.h"
 
 // Under Dev
-void key_word_spotting(){
+void key_word_spotting(float* mem_buf){
 
     ConvLayers_LR_Params conv_params = {
         .W1 = CNN1_W1,
@@ -118,37 +118,37 @@ void key_word_spotting(){
 
     /* Pre-CNN */
     in_T = I_T;
-    out_T = in_T - FILT + 2*(FILT>>1) + 1; // Depth pad = 2 for kernel size =5. SAME PAD
+    out_T = in_T - PRE_CNN_FILT + (PRE_CNN_FILT_PAD<<1) + 1; // Depth pad = 2 for kernel size =5. SAME PAD
     float* cnn1_out = (float*)malloc(out_T * PRE_CNN_O_F * sizeof(float));
-    DSCNN_LR(cnn1_out, INPUT, in_T, I_F, BNORM_CNN1_MEAN, BNORM_CNN1_VAR,
-        0, 0, 0, 0, PRE_CNN_O_F, 2, FILT,
-        &conv_params, 2); // regular tanh activation
+    DSCNN_LR(cnn1_out, mem_buf, in_T, I_F, BNORM_CNN1_MEAN, BNORM_CNN1_VAR,
+        0, 0, 0, 0, PRE_CNN_O_F, PRE_CNN_FILT_PAD, PRE_CNN_FILT,
+        &conv_params, PRE_CNN_FILT_ACT); // regular tanh activation
 
     BatchNorm1d(0, cnn1_out, in_T, PRE_CNN_O_F, 
-        BNORM_RNN_MEAN, BNORM_RNN_VAR, 0, 0, 0, 1,  0.00001);
+        BNORM_RNN_MEAN, BNORM_RNN_VAR, 0, 0, 0, 1, 0.00001); // Inplace activation
 
     /* RNN */
     int fwd_window = 60, hop = 3, bwd_window = 15, rnn_hidden = RNN_O_F>>1, out_index = 0;
  
     out_T = in_T/hop + 1;
     float* temp_hiddenstate = (float*)calloc(rnn_hidden, sizeof(float));
-    float* rnn_out = (float*)malloc(out_T * (rnn_hidden<<1) * sizeof(float));
+    float* rnn_out = (float*)malloc(out_T * RNN_O_F * sizeof(float));
     // Forward
     for(int t = 0 ; t < fwd_window ; t++){
         fastgrnn_lr(temp_hiddenstate, rnn_hidden,
             cnn1_out + (t * RNN_I_F) , RNN_I_F, 1,
             &fwd_RNN_params, &buffers, 0, 0);
-        if(t % 3==0){
-            memcpy(rnn_out + ((out_index++)*(rnn_hidden<<1)), temp_hiddenstate, rnn_hidden*sizeof(float));
+        if(t % hop==0){
+            memcpy(rnn_out + ((out_index++)*RNN_O_F), temp_hiddenstate, rnn_hidden*sizeof(float));
         }
     }
-    memcpy(rnn_out + ((out_index++)*(rnn_hidden<<1)), temp_hiddenstate, rnn_hidden*sizeof(float));
+    memcpy(rnn_out + ((out_index++)*RNN_O_F), temp_hiddenstate, rnn_hidden*sizeof(float));
     for(int t = hop ; t <= in_T - fwd_window ; t += hop ){
         memset(temp_hiddenstate, 0, rnn_hidden*sizeof(float));
         fastgrnn_lr(temp_hiddenstate, rnn_hidden,
             cnn1_out + (t * RNN_I_F) , RNN_I_F, fwd_window,
             &fwd_RNN_params, &buffers, 0, 0);
-        memcpy(rnn_out + ((out_index++)*(rnn_hidden<<1)), temp_hiddenstate, rnn_hidden*sizeof(float));    
+        memcpy(rnn_out + ((out_index++)*RNN_O_F), temp_hiddenstate, rnn_hidden*sizeof(float));    
     }
 
     // Backward
@@ -158,7 +158,7 @@ void key_word_spotting(){
         fastgrnn_lr(temp_hiddenstate, rnn_hidden,
             cnn1_out + (t * RNN_I_F) , RNN_I_F, bwd_window,
             &bwd_RNN_params, &buffers, 1, 0);
-        memcpy(rnn_out + ((out_index++)*(rnn_hidden<<1) + rnn_hidden), temp_hiddenstate, rnn_hidden*sizeof(float));
+        memcpy(rnn_out + ((out_index++)*RNN_O_F + rnn_hidden), temp_hiddenstate, rnn_hidden*sizeof(float));
     }
     out_index += bwd_window/hop;
     memset(temp_hiddenstate, 0, rnn_hidden*sizeof(float));
@@ -166,11 +166,11 @@ void key_word_spotting(){
         fastgrnn_lr(temp_hiddenstate, rnn_hidden,
             cnn1_out + (t * RNN_I_F) , RNN_I_F, 1,
             &bwd_RNN_params, &buffers, 0, 0);
-        if((in_T - 1 - t) % 3 == 0){
-            memcpy(rnn_out + ((out_index--)*(rnn_hidden<<1) + rnn_hidden), temp_hiddenstate, rnn_hidden*sizeof(float));
+        if((in_T - 1 - t) % hop == 0){
+            memcpy(rnn_out + ((out_index--)*RNN_O_F + rnn_hidden), temp_hiddenstate, rnn_hidden*sizeof(float));
         }
     }
-    memcpy(rnn_out + ((out_index)*(rnn_hidden<<1) + rnn_hidden), temp_hiddenstate, rnn_hidden*sizeof(float));
+    memcpy(rnn_out + ((out_index)*RNN_O_F + rnn_hidden), temp_hiddenstate, rnn_hidden*sizeof(float));
     free(temp_hiddenstate);
 
     free(cnn1_out);
@@ -178,50 +178,50 @@ void key_word_spotting(){
     /* Post-CNN */
     // CNN2
     in_T = out_T;
-    out_T = in_T - DEPTH_FILT + 2*(DEPTH_FILT>>1) + 1; // Depth pad = 2 for kernel size =5. SAME PAD
-    out_T = out_T - POST_CNN_POOL + 2*(0) + 1; // Pool pad = none/0
+    out_T = in_T - POST_CNN_DEPTH_FILT + (POST_CNN_DEPTH_PAD<<1) + 1;
+    out_T = out_T - POST_CNN_POOL + (POST_CNN_POOL_PAD<<1) + 1;
     float* cnn2_out = (float*)malloc(out_T * POST_CNN_I_F * sizeof(float));
     DSCNN_LR_Point_Depth(cnn2_out, rnn_out, in_T, POST_CNN_I_F, CNN2_BNORM_MEAN, CNN2_BNORM_VAR,
-        0, 0, 0, 1, POST_CNN_I_F>>1, DEPTH_FILT>>1, 
-        DEPTH_FILT, &depth_param_2, 0, POST_CNN_I_F, 
-        0, POINT_FILT, &point_param_2, 0, 
-        0, POST_CNN_POOL, 0);
+        0, 0, 0, 1, POST_CNN_I_F>>1, POST_CNN_DEPTH_PAD, 
+        POST_CNN_DEPTH_FILT, &depth_param_2, POST_CNN_DEPTH_ACT, POST_CNN_I_F, 
+        POST_CNN_POINT_PAD, POST_CNN_POINT_FILT, &point_param_2, POST_CNN_POINT_ACT, 
+        POST_CNN_POOL_PAD, POST_CNN_POOL, POST_CNN_POOL_ACT);
     free(rnn_out);
 
     // CNN3
     in_T = out_T;
-    out_T = in_T - DEPTH_FILT + 2*(DEPTH_FILT>>1) + 1; // Depth pad = 2 for kernel size =5. SAME PAD
-    out_T = out_T - POST_CNN_POOL + 2*(0) + 1; // Pool pad = none/0
+    out_T = in_T - POST_CNN_DEPTH_FILT + (POST_CNN_DEPTH_PAD<<1) + 1;
+    out_T = out_T - POST_CNN_POOL + (POST_CNN_POOL_PAD<<1) + 1;
     float* cnn3_out = (float*)malloc(out_T * POST_CNN_I_F * sizeof(float));
     DSCNN_LR_Point_Depth(cnn3_out, cnn2_out, in_T, POST_CNN_I_F, CNN3_BNORM_MEAN, CNN3_BNORM_VAR,
-        0, 0, 0, 1, POST_CNN_I_F>>1, DEPTH_FILT>>1, 
-        DEPTH_FILT, &depth_param_3, 0, POST_CNN_I_F, 
-        0, POINT_FILT, &point_param_3, 0, 
-        0, POST_CNN_POOL, 0);
+        0, 0, 0, 1, POST_CNN_I_F>>1, POST_CNN_DEPTH_PAD, 
+        POST_CNN_DEPTH_FILT, &depth_param_3, POST_CNN_DEPTH_ACT, POST_CNN_I_F, 
+        POST_CNN_POINT_PAD, POST_CNN_POINT_FILT, &point_param_3, POST_CNN_POINT_ACT, 
+        POST_CNN_POOL_PAD, POST_CNN_POOL, POST_CNN_POOL_ACT);
         free(cnn2_out);
 
     // CNN4
     in_T = out_T;
-    out_T = in_T - DEPTH_FILT + 2*(DEPTH_FILT>>1) + 1; // Depth pad = 2 for kernel size =5. SAME PAD
-    out_T = out_T - POST_CNN_POOL + 2*(0) + 1; // Pool pad = none/0
+    out_T = in_T - POST_CNN_DEPTH_FILT + (POST_CNN_DEPTH_PAD<<1) + 1;
+    out_T = out_T - POST_CNN_POOL + (POST_CNN_POOL_PAD<<1) + 1;
     float* cnn4_out = (float*)malloc(out_T * POST_CNN_I_F * sizeof(float));
     DSCNN_LR_Point_Depth(cnn4_out, cnn3_out, in_T, POST_CNN_I_F, CNN4_BNORM_MEAN, CNN4_BNORM_VAR,
-        0, 0, 0, 1, POST_CNN_I_F>>1, DEPTH_FILT>>1, 
-        DEPTH_FILT, &depth_param_4, 0, POST_CNN_I_F, 
-        0, POINT_FILT, &point_param_4, 0, 
-        0, POST_CNN_POOL, 0);
+        0, 0, 0, 1, POST_CNN_I_F>>1, POST_CNN_DEPTH_PAD, 
+        POST_CNN_DEPTH_FILT, &depth_param_4, POST_CNN_DEPTH_ACT, POST_CNN_I_F, 
+        POST_CNN_POINT_PAD, POST_CNN_POINT_FILT, &point_param_4, POST_CNN_POINT_ACT, 
+        POST_CNN_POOL_PAD, POST_CNN_POOL, POST_CNN_POOL_ACT);
     free(cnn3_out);
 
     // CNN5
     in_T = out_T;
-    out_T = in_T - DEPTH_FILT + 2*(DEPTH_FILT>>1) + 1; // Depth pad = 2 for kernel size =5. SAME PAD
-    out_T = out_T - POST_CNN_POOL + 2*(0) + 1; // Pool pad = none/0
+    out_T = in_T - POST_CNN_DEPTH_FILT + (POST_CNN_DEPTH_PAD<<1) + 1;
+    out_T = out_T - POST_CNN_POOL + (POST_CNN_POOL_PAD<<1) + 1;
     float* pred = (float*)malloc(out_T * POST_CNN_O_F * sizeof(float));
     DSCNN_LR_Point_Depth(pred, cnn4_out, in_T, POST_CNN_I_F, CNN5_BNORM_MEAN, CNN5_BNORM_VAR,
-        0, 0, 0, 1, POST_CNN_I_F>>1, DEPTH_FILT>>1, 
-        DEPTH_FILT, &depth_param_5, 0, POST_CNN_O_F, 
-        0, POINT_FILT, &point_param_5, 0, 
-        0, POST_CNN_POOL, 0);
+        0, 0, 0, 1, POST_CNN_I_F>>1, POST_CNN_DEPTH_PAD, 
+        POST_CNN_DEPTH_FILT, &depth_param_5, POST_CNN_DEPTH_ACT, POST_CNN_O_F, 
+        POST_CNN_POINT_PAD, POST_CNN_POINT_FILT, &point_param_5, POST_CNN_POINT_ACT, 
+        POST_CNN_POOL_PAD, POST_CNN_POOL, POST_CNN_POOL_ACT);
     free(cnn4_out);
 
     if(out_T != O_T){
@@ -247,7 +247,7 @@ void key_word_spotting(){
 
 int main(){
     
-    key_word_spotting();
+    key_word_spotting(INPUT);
 
     return 0 ;
 }

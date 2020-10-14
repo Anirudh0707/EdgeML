@@ -8,12 +8,10 @@ MODEL_DIR=../models
 SRC_DIR=../src
 IFLAGS = -I $(INCLUDE_DIR) -I $(MODEL_DIR)
 
-all: test_rnn test_postcnn test_avg_pool test_conv1d test_conv1d_depth test_conv1d_lr test_conv1d_lr_depth test_dscnn_lr test_dscnn_lr_depth_point test_fastgrnn_lr test_rnnpool test_quantized_utils test_quantized_fastgrnn test_quantized_rnnpool test_quantized_mbconv test_quantized_face_detection test_quantized_face_detection_fast test_keyword_spotting
+all: test_rnn test_avg_pool test_conv1d test_conv1d_depth test_conv1d_lr test_conv1d_lr_depth test_dscnn_lr test_dscnn_lr_depth_point test_fastgrnn_lr test_rnnpool test_quantized_utils test_quantized_fastgrnn test_quantized_rnnpool test_quantized_mbconv test_quantized_face_detection test_quantized_face_detection_fast test_keyword_spotting
 
 KWS_DIR=kws
 test_keyword_spotting: $(KWS_DIR)/test_keyword_spotting.c $(SRC_DIR)/conv_utils.o $(SRC_DIR)/utils.o $(SRC_DIR)/conv1d.o $(SRC_DIR)/dscnn.o $(SRC_DIR)/fastgrnn.o
-	$(CC) -o $@ $^ $(IFLAGS) $(CFLAGS) -lm
-test_postcnn: $(KWS_DIR)/test_postcnn.c $(SRC_DIR)/conv_utils.o $(SRC_DIR)/utils.o $(SRC_DIR)/conv1d.o $(SRC_DIR)/dscnn.o
 	$(CC) -o $@ $^ $(IFLAGS) $(CFLAGS) -lm
 test_rnn: $(KWS_DIR)/test_rnn.c $(SRC_DIR)/fastgrnn.o $(SRC_DIR)/utils.o
 	$(CC) -o $@ $^ $(IFLAGS) $(CFLAGS) -lm
@@ -65,7 +63,7 @@ test_quantized_face_detection_fast: $(FACE_DETECTION_DIR)/test_quantized_face_de
 .PHONY: clean cleanest
 
 clean: 
-	rm -f *.o *.gch test_rnn test_postcnn test_avg_pool test_conv1d test_conv1d_depth test_conv1d_lr test_conv1d_lr_depth test_dscnn_lr test_dscnn_lr_depth_point test_fastgrnn_lr test_rnnpool test_quantized_utils test_quantized_fastgrnn test_quantized_rnnpool test_quantized_mbconv test_quantized_face_detection test_quantized_face_detection_fast test_keyword_spotting
+	rm -f *.o *.gch test_rnn test_avg_pool test_conv1d test_conv1d_depth test_conv1d_lr test_conv1d_lr_depth test_dscnn_lr test_dscnn_lr_depth_point test_fastgrnn_lr test_rnnpool test_quantized_utils test_quantized_fastgrnn test_quantized_rnnpool test_quantized_mbconv test_quantized_face_detection test_quantized_face_detection_fast test_keyword_spotting
 
 cleanest: clean
 	rm *~
