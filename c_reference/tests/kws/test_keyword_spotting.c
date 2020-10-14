@@ -15,74 +15,63 @@
 #include"fastgrnn.h"
 #include"utils.h"
 
-ConvLayers_LR_Params conv_params = {
-    .W1 = CNN1_W1,
-    .W2 = CNN1_W2,
-    .B = CNN1_BIAS,
-    .rank = LOW_RANK
-};
-
-ConvLayers_Params depth_param_2 = {
-    .W = CNN2_DEPTH_W,
-    .B = CNN2_DEPTH_BIAS,
-};
-
-ConvLayers_LR_Params point_param_2 = {
-    .W1 = CNN2_POINT_W1,
-    .W2 = CNN2_POINT_W2,
-    .B = CNN2_POINT_BIAS,
-    .rank = LOW_RANK
-};
-
-ConvLayers_Params depth_param_3 = {
-    .W = CNN3_DEPTH_W,
-    .B = CNN3_DEPTH_BIAS,
-};
-
-ConvLayers_LR_Params point_param_3 = {
-    .W1 = CNN3_POINT_W1,
-    .W2 = CNN3_POINT_W2,
-    .B = CNN3_POINT_BIAS,
-    .rank = LOW_RANK
-};
-
-ConvLayers_Params depth_param_4 = {
-    .W = CNN4_DEPTH_W,
-    .B = CNN4_DEPTH_BIAS,
-};
-
-ConvLayers_LR_Params point_param_4 = {
-    .W1 = CNN4_POINT_W1,
-    .W2 = CNN4_POINT_W2,
-    .B = CNN4_POINT_BIAS,
-    .rank = LOW_RANK
-};
-
-ConvLayers_Params depth_param_5 = {
-    .W = CNN5_DEPTH_W,
-    .B = CNN5_DEPTH_BIAS,
-};
-
-ConvLayers_LR_Params point_param_5 = {
-    .W1 = CNN5_POINT_W1,
-    .W2 = CNN5_POINT_W2,
-    .B = CNN5_POINT_BIAS,
-    .rank = LOW_RANK
-};
-
-float preComp[RNN_I_F] = { 0.0 };
-float tempLRW[LOW_RANK] = { 0.0 };
-float tempLRU[LOW_RANK] = { 0.0 };
-float normFeatures[RNN_I_F] = { 0.0 };
-FastGRNN_LR_Buffers buffers = {
-    .preComp = preComp,
-    .tempLRW = tempLRW,
-    .tempLRU = tempLRU,
-    .normFeatures = normFeatures
-};
-
 // Under Dev
 void key_word_spotting(){
+
+    ConvLayers_LR_Params conv_params = {
+        .W1 = CNN1_W1,
+        .W2 = CNN1_W2,
+        .B = CNN1_BIAS,
+        .rank = LOW_RANK
+    };
+
+    ConvLayers_Params depth_param_2 = {
+        .W = CNN2_DEPTH_W,
+        .B = CNN2_DEPTH_BIAS,
+    };
+
+    ConvLayers_LR_Params point_param_2 = {
+        .W1 = CNN2_POINT_W1,
+        .W2 = CNN2_POINT_W2,
+        .B = CNN2_POINT_BIAS,
+        .rank = LOW_RANK
+    };
+
+    ConvLayers_Params depth_param_3 = {
+        .W = CNN3_DEPTH_W,
+        .B = CNN3_DEPTH_BIAS,
+    };
+
+    ConvLayers_LR_Params point_param_3 = {
+        .W1 = CNN3_POINT_W1,
+        .W2 = CNN3_POINT_W2,
+        .B = CNN3_POINT_BIAS,
+        .rank = LOW_RANK
+    };
+
+    ConvLayers_Params depth_param_4 = {
+        .W = CNN4_DEPTH_W,
+        .B = CNN4_DEPTH_BIAS,
+    };
+
+    ConvLayers_LR_Params point_param_4 = {
+        .W1 = CNN4_POINT_W1,
+        .W2 = CNN4_POINT_W2,
+        .B = CNN4_POINT_BIAS,
+        .rank = LOW_RANK
+    };
+
+    ConvLayers_Params depth_param_5 = {
+        .W = CNN5_DEPTH_W,
+        .B = CNN5_DEPTH_BIAS,
+    };
+
+    ConvLayers_LR_Params point_param_5 = {
+        .W1 = CNN5_POINT_W1,
+        .W2 = CNN5_POINT_W2,
+        .B = CNN5_POINT_BIAS,
+        .rank = LOW_RANK
+    };
 
     FastGRNN_LR_Params bwd_RNN_params = {
         .mean   = 0,
@@ -113,7 +102,18 @@ void key_word_spotting(){
         .sigmoid_zeta = sigmoid(F_ZETA),
         .sigmoid_nu   = sigmoid(F_NU)
     };
-    float pred[O_T * POST_CNN_O_F] = {0.0};
+
+    float preComp[RNN_I_F] = { 0.0 };
+    float tempLRW[LOW_RANK] = { 0.0 };
+    float tempLRU[LOW_RANK] = { 0.0 };
+    float normFeatures[RNN_I_F] = { 0.0 };
+    FastGRNN_LR_Buffers buffers = {
+        .preComp = preComp,
+        .tempLRW = tempLRW,
+        .tempLRU = tempLRU,
+        .normFeatures = normFeatures
+    };
+    
     unsigned in_T, out_T;
 
     /* Pre-CNN */
@@ -176,6 +176,7 @@ void key_word_spotting(){
     free(cnn1_out);
 
     /* Post-CNN */
+    // CNN2
     in_T = out_T;
     out_T = in_T - DEPTH_FILT + 2*(DEPTH_FILT>>1) + 1; // Depth pad = 2 for kernel size =5. SAME PAD
     out_T = out_T - POST_CNN_POOL + 2*(0) + 1; // Pool pad = none/0
@@ -186,7 +187,8 @@ void key_word_spotting(){
         0, POINT_FILT, &point_param_2, 0, 
         0, POST_CNN_POOL, 0);
     free(rnn_out);
-    
+
+    // CNN3
     in_T = out_T;
     out_T = in_T - DEPTH_FILT + 2*(DEPTH_FILT>>1) + 1; // Depth pad = 2 for kernel size =5. SAME PAD
     out_T = out_T - POST_CNN_POOL + 2*(0) + 1; // Pool pad = none/0
@@ -198,6 +200,7 @@ void key_word_spotting(){
         0, POST_CNN_POOL, 0);
         free(cnn2_out);
 
+    // CNN4
     in_T = out_T;
     out_T = in_T - DEPTH_FILT + 2*(DEPTH_FILT>>1) + 1; // Depth pad = 2 for kernel size =5. SAME PAD
     out_T = out_T - POST_CNN_POOL + 2*(0) + 1; // Pool pad = none/0
@@ -209,9 +212,11 @@ void key_word_spotting(){
         0, POST_CNN_POOL, 0);
     free(cnn3_out);
 
+    // CNN5
     in_T = out_T;
     out_T = in_T - DEPTH_FILT + 2*(DEPTH_FILT>>1) + 1; // Depth pad = 2 for kernel size =5. SAME PAD
     out_T = out_T - POST_CNN_POOL + 2*(0) + 1; // Pool pad = none/0
+    float* pred = (float*)malloc(out_T * POST_CNN_O_F * sizeof(float));
     DSCNN_LR_Point_Depth(pred, cnn4_out, in_T, POST_CNN_I_F, CNN5_BNORM_MEAN, CNN5_BNORM_VAR,
         0, 0, 0, 1, POST_CNN_I_F>>1, DEPTH_FILT>>1, 
         DEPTH_FILT, &depth_param_5, 0, POST_CNN_O_F, 
