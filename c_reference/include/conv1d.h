@@ -9,9 +9,9 @@
  * @var   W    pointer to convolutional weights W, size for regular = out_channels*in_channels*kernel_size, size for depth based = out_channels*kernel_size
  * @var   B    pointer to the bias vector for the convolution, shape = [out_channels]
  */
-typedef struct ConvLayers_Params{
-    float* W;
-    float* B;
+typedef struct ConvLayers_Params {
+  float* W;
+  float* B;
 } ConvLayers_Params;
 
 /**
@@ -31,9 +31,9 @@ typedef struct ConvLayers_Params{
  *                                2: tanh
  *                                3: relu
  */
-int Conv1D(float *output_signal, unsigned out_T, unsigned out_channels, const float *input_signal, 
-    unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size, 
-    const void* params, int activations);
+int conv1d(float *output_signal, unsigned out_T, unsigned out_channels, const float *input_signal, 
+  unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size, 
+  const void* params, int activations);
 
 /**
  * @brief Model definition for the 1D Depthwise Convolution Layer
@@ -51,9 +51,9 @@ int Conv1D(float *output_signal, unsigned out_T, unsigned out_channels, const fl
  *                                2: tanh
  *                                3: relu
  */
-int Conv1D_Depth(float *output_signal, unsigned out_T, const float *input_signal, 
-    unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size, 
-    const void* params, int activations);
+int conv1d_depth(float *output_signal, unsigned out_T, const float *input_signal, 
+  unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size, 
+  const void* params, int activations);
 
 
 // Low Rank Convolution
@@ -64,11 +64,11 @@ int Conv1D_Depth(float *output_signal, unsigned out_T, const float *input_signal
  * @var    B       pointer to the bias vector for the convolution, shape = [out_channels]
  * @var    rank    rank of the weight tensor. A low rank decomposition typically used to reduce computation and storage
  */
-typedef struct ConvLayers_LR_Params{
-    float* W1;
-    float* W2;
-    float* B;
-    unsigned rank;
+typedef struct ConvLayers_LR_Params {
+  float* W1;
+  float* W2;
+  float* B;
+  unsigned rank;
 } ConvLayers_LR_Params;
 
 /**
@@ -89,9 +89,9 @@ typedef struct ConvLayers_LR_Params{
  *                                2: tanh
  *                                3: relu
  */
-int Conv1D_LR(float *output_signal, unsigned out_T, unsigned out_channels, const float *input_signal, 
-    unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size, 
-    const void* params, int activations);
+int conv1d_lr(float *output_signal, unsigned out_T, unsigned out_channels, const float *input_signal, 
+  unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size, 
+  const void* params, int activations);
 
 /**
  * @brief Model definition for the 1D Depthwise Convolution Layer
@@ -110,9 +110,9 @@ int Conv1D_LR(float *output_signal, unsigned out_T, unsigned out_channels, const
  *                                2: tanh
  *                                3: relu
  */
-int Conv1D_Depth_LR(float *output_signal, unsigned out_T, const float *input_signal, 
-    unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size, 
-    const void* params, int activations);
+int conv1d_depth_lr(float *output_signal, unsigned out_T, const float *input_signal, 
+  unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size, 
+  const void* params, int activations);
 
 // Auxillary Layers
 /**
@@ -130,8 +130,8 @@ int Conv1D_Depth_LR(float *output_signal, unsigned out_T, const float *input_sig
  *                                2: tanh
  *                                3: relu
  */
-int AvgPool1D(float *output_signal, unsigned out_T, const float *input_signal, unsigned in_T, unsigned in_channels, 
-    int padding, unsigned kernel_size, int activations);
+int avgpool1d(float *output_signal, unsigned out_T, const float *input_signal, unsigned in_T, unsigned in_channels, 
+  int padding, unsigned kernel_size, int activations);
 
 /**
  * @brief Model definition for the 1D batch Normalization Layer
@@ -147,6 +147,7 @@ int AvgPool1D(float *output_signal, unsigned out_T, const float *input_signal, u
  * @param[in]    in_place         in place computation of the batchnorm i.e. the output is stored in place of the input signal. Storage efficient
  * @param[in]    eps              a very small +ve value to avoid division by 0. For the default value, assign = 0.00001
  */
-int BatchNorm1d(float* output_signal, float* input_signal, unsigned in_T, unsigned in_channels, 
-    float* mean, float* var, unsigned affine, float* gamma , float * beta, unsigned in_place, float eps);
+int batchnorm1d(float* output_signal, float* input_signal, unsigned in_T, unsigned in_channels, 
+  float* mean, float* var, unsigned affine, float* gamma , float * beta, unsigned in_place, float eps);
+
 #endif

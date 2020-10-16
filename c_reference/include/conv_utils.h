@@ -13,7 +13,7 @@
  * @param[in]    I       dim 0 for W1, value = out_channels
  * @param[in]    J       dim 1 for W2, value = in_channels * kernel_size, (or for depthwise) = kernel_size
  */
-int MatMul(float* out, float* W1, float* W2, unsigned rank, unsigned I, unsigned J);
+int matmul(float* out, float* W1, float* W2, unsigned rank, unsigned I, unsigned J);
 
 /**
  * @brief Definition for the Custom non-linear layer : The TanhGate
