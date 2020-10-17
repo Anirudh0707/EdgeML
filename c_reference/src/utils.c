@@ -80,7 +80,7 @@ void matmul(const float* const matA, const float* const matB,
       float sum = 0;
       for(int k = 0; k < ncommon; k++)
         sum += (matA[row * ncommon + k] * matB[k * ncols + col]);
-      out[row * ncols + col] = alpha * out[row * ncols + col] + beta * sum;
+      ret[row * ncols + col] = alpha * ret[row * ncols + col] + beta * sum;
     }
   }
 }
