@@ -3,30 +3,24 @@
 
 #include<stdlib.h>
 #include<math.h>
+#include "conv1d.h"
+#include "utils.h"
 
-#include"conv1d.h"
-#include"conv_utils.h"
-#include"utils.h"
-
-int conv1d_lr(float *output_signal, unsigned out_T, unsigned out_channels, const float *input_signal,
-  unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size,
+int conv1d_lr(float *output_signal, unsigned out_time, unsigned out_channels, const float *input_signal,
+  unsigned in_time, unsigned in_channels, int padding, unsigned kernel_size,
   const void* params, int activations) {
 
   const ConvLayers_LR_Params* tparams= (ConvLayers_LR_Params*) params;
-
-  if (padding == -1) {
-    padding = kernel_size >> 1;
-  }
   
   float* tempW = (float*)malloc(out_channels * in_channels * kernel_size * sizeof(float));
   matmul(tempW, tparams->W1, tparams->W2, tparams->rank, out_channels, in_channels * kernel_size);
   // Perform the Convolution
-  for (int t = 0; t < out_T; t++) {
+  for (int t = 0; t < out_time; t++) {
     for (int co = 0; co < out_channels; co++) {
       float sum = 0;
       for (int tf = 0; tf < kernel_size; tf++) {
         for (int ci = 0; ci < in_channels; ci++) {
-          if (((t + tf) < padding) || ((t + tf) >= (in_T + padding)))
+          if (((t + tf) < padding) || ((t + tf) >= (in_time + padding)))
             continue;
           else
             sum += (input_signal[((tf + t) - padding) * in_channels + ci] * tempW[co * in_channels * kernel_size + ci * kernel_size + tf]);
@@ -47,24 +41,20 @@ int conv1d_lr(float *output_signal, unsigned out_T, unsigned out_channels, const
   return 0;
 }
 
-int conv1d_depth_lr(float *output_signal, unsigned out_T, const float *input_signal,
-  unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size,
+int conv1d_depth_lr(float *output_signal, unsigned out_time, const float *input_signal,
+  unsigned in_time, unsigned in_channels, int padding, unsigned kernel_size,
   const void* params, int activations) {
 
   const ConvLayers_LR_Params* tparams= (ConvLayers_LR_Params*) params;
 
-  if (padding == -1) {
-    padding = kernel_size >> 1;
-  }
-
   float* tempW = (float*)malloc(in_channels * kernel_size * sizeof(float));
   matmul(tempW, tparams->W1, tparams->W2, tparams->rank, in_channels, kernel_size);
   // Perform the Convolution
-  for (int t = 0; t < out_T; t++) {
+  for (int t = 0; t < out_time; t++) {
     for (int ci = 0; ci < in_channels; ci++) {
       float sum = 0;
       for (int tf = 0; tf < kernel_size; tf++) {
-        if (((t + tf) < padding) || ((t + tf) >= (in_T + padding)))
+        if (((t + tf) < padding) || ((t + tf) >= (in_time + padding)))
           continue;
         else
           sum += (input_signal[((tf + t) - padding) * in_channels + ci] * tempW[ci * kernel_size + tf]);
@@ -86,23 +76,19 @@ int conv1d_depth_lr(float *output_signal, unsigned out_T, const float *input_sig
 
 
 
-int conv1d(float *output_signal, unsigned out_T, unsigned out_channels, const float *input_signal,
-  unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size,
+int conv1d(float *output_signal, unsigned out_time, unsigned out_channels, const float *input_signal,
+  unsigned in_time, unsigned in_channels, int padding, unsigned kernel_size,
   const void* params, int activations) {
 
   const ConvLayers_Params* tparams= (ConvLayers_Params*) params;
 
-  if (padding == -1) {
-    padding = kernel_size >> 1;
-  }
-  float sum;
   // Perform the Convolution
-  for (int t = 0; t < out_T; t++) {
+  for (int t = 0; t < out_time; t++) {
       for (int co = 0; co < out_channels; co++) {
-      sum = 0;
+      float sum = 0;
       for (int tf = 0; tf < kernel_size; tf++) {
         for (int ci = 0; ci < in_channels; ci++) {
-          if (((t + tf) < padding) || ((t + tf) >= (in_T + padding)))
+          if (((t + tf) < padding) || ((t + tf) >= (in_time + padding)))
             continue;
           else
             sum += (input_signal[((tf + t) - padding) * in_channels + ci] * tparams->W[co * in_channels * kernel_size + ci * kernel_size + tf]);
@@ -122,22 +108,18 @@ int conv1d(float *output_signal, unsigned out_T, unsigned out_channels, const fl
   return 0;
 }
 
-int conv1d_depth(float *output_signal, unsigned out_T, const float *input_signal,
-  unsigned in_T, unsigned in_channels, int padding, unsigned kernel_size,
+int conv1d_depth(float *output_signal, unsigned out_time, const float *input_signal,
+  unsigned in_time, unsigned in_channels, int padding, unsigned kernel_size,
   const void* params, int activations) {
 
   const ConvLayers_Params* tparams= (ConvLayers_Params*) params;
 
-  if (padding == -1) {
-    padding = kernel_size >> 1;
-  }
-
   // Perform the Convolution
-  for (int t = 0; t < out_T; t++) {
+  for (int t = 0; t < out_time; t++) {
     for (int ci = 0; ci < in_channels; ci++) {
       float sum = 0;
       for (int tf = 0; tf < kernel_size; tf++) {
-        if (((t + tf) < padding) || ((t + tf) >= (in_T + padding)))
+        if (((t + tf) < padding) || ((t + tf) >= (in_time + padding)))
           continue;
         else
           sum += (input_signal[((tf + t) - padding) * in_channels + ci] * tparams->W[ci * kernel_size + tf]);
@@ -156,18 +138,15 @@ int conv1d_depth(float *output_signal, unsigned out_T, const float *input_signal
   return 0;
 }
 
-int avgpool1d(float *output_signal, unsigned out_T, const float *input_signal, unsigned in_T, unsigned in_channels,
+int avgpool1d(float *output_signal, unsigned out_time, const float *input_signal, unsigned in_time, unsigned in_channels,
   int padding, unsigned kernel_size, int activations) {
-  
-  if (padding == -1) {
-    padding = kernel_size >> 1;
-  }
+
   // Iterate over the time steps and averge them. Similar to Conv1D_Dept with a filter kernel full of ones
-  for (int t = 0; t < out_T; t++) {
+  for (int t = 0; t < out_time; t++) {
     for (int ci = 0; ci < in_channels; ci++) {
       float sum = 0;
       for (int tf = 0; tf < kernel_size; tf++) {
-        if (((t + tf) < padding) || ((t + tf) >= (in_T + padding)))
+        if (((t + tf) < padding) || ((t + tf) >= (in_time + padding)))
           continue;
         else
           sum += (input_signal[((tf + t) - padding) * in_channels + ci]);
@@ -185,30 +164,42 @@ int avgpool1d(float *output_signal, unsigned out_T, const float *input_signal, u
   return 0;
 }
 
-int batchnorm1d(float* output_signal, float* input_signal, unsigned in_T, unsigned in_channels,
+int batchnorm1d(float* output_signal, float* input_signal, unsigned in_time, unsigned in_channels,
   float* mean, float* var, unsigned affine, float* gamma , float * beta, unsigned in_place, float eps) {
   // Check if affine values are learnt
   if (affine) {
     // Check for in place computation
-    if (in_place)
-      for (int t = 0; t < in_T; t++)
-        for (int d = 0; d < in_channels; d++)
+    if (in_place) {
+      for (int t = 0; t < in_time; t++) {
+        for (int d = 0; d < in_channels; d++) {
           input_signal[t * in_channels + d]  = gamma[d]*((input_signal[t * in_channels + d] - mean[d])/sqrt(var[d] + eps)) + beta[d];
-    else
-      for (int t = 0; t < in_T; t++)
-        for (int d = 0; d < in_channels; d++)
+        }
+      }
+    }
+    else {
+      for (int t = 0; t < in_time; t++) {
+        for (int d = 0; d < in_channels; d++) {
           output_signal[t * in_channels + d] = gamma[d]*((input_signal[t * in_channels + d] - mean[d])/sqrt(var[d] + eps)) + beta[d];
+        }
+      }
+    }
   }
   else {
       // Check for in place computation
-    if (in_place)
-      for (int t = 0; t < in_T; t++)
-        for (int d = 0; d < in_channels; d++)
+    if (in_place) {
+      for (int t = 0; t < in_time; t++) {
+        for (int d = 0; d < in_channels; d++) {
           input_signal[t * in_channels + d]  = ((input_signal[t * in_channels + d] - mean[d])/sqrt(var[d] + eps));
-    else
-      for (int t = 0; t < in_T; t++)
-        for (int d = 0; d < in_channels; d++)
+        }
+      }
+    }
+    else {
+      for (int t = 0; t < in_time; t++) {
+        for (int d = 0; d < in_channels; d++) {
           output_signal[t * in_channels + d] = ((input_signal[t * in_channels + d] - mean[d])/sqrt(var[d] + eps));
+        }
+      }
+    }
   }
   return 0;
 }

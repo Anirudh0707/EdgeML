@@ -1,16 +1,16 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license.
 
-#ifndef __DSCNN__
-#define __DSCNN__
+#ifndef __DSCNN_H__
+#define __DSCNN_H__
 
 /**
  * @brief Model definition for the 1D Convolution sub-block applied before the RNN
  * @brief sub-layers : BatchNorm1d -> Conv1D_LR
  * 
- * @param[out]   output_signal       pointer to the final output signal, minimum size = out_T * in_channels. out_T has to be calculated based on the reduction from all the conv and pool layers
- * @param[in]    input_signal        pointer to the input signal. size = in_T * in_channels
- * @param[in]    in_T                number of time steps in the input
+ * @param[out]   output_signal       pointer to the final output signal, minimum size = out_time * in_channels. out_time has to be calculated based on the reduction from all the conv and pool layers
+ * @param[in]    input_signal        pointer to the input signal. size = in_time * in_channels
+ * @param[in]    in_time                number of time steps in the input
  * @param[in]    in_channels         number of input channels. The output will have the same number of channels
  
  * @param[in]    mean                pointer to the mean for the batch normalization, size = in_channels
@@ -30,7 +30,7 @@
  *                                   2: tanh
  *                                   3: relu
  */
-int dscnn_lr(float* output_signal, float* input_signal, unsigned in_T, unsigned in_channels,
+int phon_pred_lr_cnn(float* output_signal, float* input_signal, unsigned in_time, unsigned in_channels,
   float* mean, float* var, unsigned affine, float* gamma, float* beta, unsigned in_place,
   unsigned cnn_hidden, int cnn_padding, unsigned cnn_kernel_size,
   const void* cnn_params, int cnn_activations);
@@ -39,9 +39,9 @@ int dscnn_lr(float* output_signal, float* input_signal, unsigned in_T, unsigned 
  * @brief Model definition for the 1D Convolution sub-block applied after the RNN
  * @brief sub-layers : TanhGate(custom) nonlinearity -> BatchNorm1d -> Conv1D_Depth -> Conv1d_LR -> AvgPool
  * 
- * @param[out]   output_signal          pointer to the final output signal, minimum size = out_T * in_channels. out_T has to be calculated based on the reduction from all the conv and pool layers
- * @param[in]    input_signal           pointer to the input signal. size = in_T * in_channels
- * @param[in]    in_T                   number of time steps in the input
+ * @param[out]   output_signal          pointer to the final output signal, minimum size = out_time * in_channels. out_time has to be calculated based on the reduction from all the conv and pool layers
+ * @param[in]    input_signal           pointer to the input signal. size = in_time * in_channels
+ * @param[in]    in_time                   number of time steps in the input
  * @param[in]    in_channels            number of input channels. The output will have the same number of channels
  
  * @param[in]    mean                   pointer to the mean for the batch normalization, size = in_channels
@@ -79,7 +79,7 @@ int dscnn_lr(float* output_signal, float* input_signal, unsigned in_T, unsigned 
  *                                      2: tanh
  *                                      3: relu
  */
-int dscnn_depth_point_lr(float* output_signal, float* input_signal, unsigned in_T, unsigned in_channels,
+int phon_pred_depth_point_lr_cnn(float* output_signal, float* input_signal, unsigned in_time, unsigned in_channels,
   float* mean, float* var, unsigned affine, float* gamma, float* beta, unsigned in_place,
   unsigned depth_cnn_hidden, int depth_cnn_padding, unsigned depth_cnn_kernel_size,
   const void* depth_cnn_params, int depth_cnn_activations,

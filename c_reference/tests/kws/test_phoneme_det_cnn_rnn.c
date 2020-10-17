@@ -5,19 +5,20 @@
 #include<stdlib.h>
 #include<string.h>
 #include<time.h>
-#include"conv1d.h"
-#include"dscnn.h"
-#include"fastgrnn.h"
-#include"utils.h"
+#include "conv1d.h"
+#include "dscnn.h"
+#include "fastgrnn.h"
+#include "utils.h"
+#include "rnn_bricked.h"
 
-#include"keyword_spotting_io_2.h"
-#include"precnn_params.h"
-#include"rnn_params.h"
-#include"postcnn_params.h"
+#include "keyword_spotting_io_2.h"
+#include "precnn_params.h"
+#include "rnn_params.h"
+#include "postcnn_params.h"
 
 // Check out time steps with label time steps
-int checkTime(unsigned out_T) {
-  if (out_T != O_T) {
+int checkTime(unsigned out_time) {
+  if (out_time != O_T) {
     printf("Error, Estimated Output and Actual ouput time axis mis-match");
     return 1;
   }
@@ -35,10 +36,25 @@ void checkError(float* pred, float* label) {
   float avg_error = error/(O_T*POST_CNN_O_F);
   printf("Full Network\n");
   printf("Aggregate Squared Error : %f   ;   Mean Sqaured Error : %f  \n", error, avg_error);
-  printf("Denominator for RMSE : %f \n", denom);
   printf("RMSE : %f \n", error/denom);
 }
-void key_word_spotting(float* mem_buf) {
+
+/* CNN-RNN based Phoneme Detection Model
+ 
+  The phoneme detection model being used consists of 5 blocks.
+  1st block is a CNN, where krenel size is 5.
+  2nd block is an RNN, which has a specified forward and a backward context running at a stride/hop of 3.
+  Hence it reduces the sequence length by a factor of 3.
+  Rest of the blocks are a combination of CNNs, a depth cnn with a kernel size of 5 and a point cnn with a kernel size of 1
+
+  Input to the architecture is of the form (seq_len, feature_dim) where feature dim refers to n_mels .
+  Output is of the form (seq_len/3, 41) where 41 is the number of phonemes over which classification is done. 
+  Phonemes are predicted for every 3rd time frame, assuming they dont vary faster then that.
+
+  NOTE: Before deployment for real-time streaming applications, we would need to make minor modification
+  These changes are subject to the input specs i.e fixing buffer time steps, number of features from the featurizer, method of reading into a buffer
+*/
+void phoneme_prediction(float* mem_buf) {
   ConvLayers_LR_Params conv_params = {
     .W1 = CNN1_W1,
     .W2 = CNN1_W2,
@@ -135,75 +151,44 @@ void key_word_spotting(float* mem_buf) {
     .normFeatures = normFeatures
   };
   
-  unsigned in_T, out_T;
+  unsigned in_time, out_time;
 
   /* Pre-CNN */
-  in_T = I_T;
-  out_T = in_T - PRE_CNN_FILT + (PRE_CNN_FILT_PAD<<1) + 1; // Depth pad = 2 for kernel size =5. SAME PAD
-  float* cnn1_out = (float*)malloc(out_T * PRE_CNN_O_F * sizeof(float));
-  // Since bnorm is the first layer and inplce will alter input. Use only if input can be discarded/altered. Else avoid inplace
-  dscnn_lr(cnn1_out, mem_buf, in_T, PRE_CNN_I_F,
+  in_time = I_T;
+  out_time = in_time - PRE_CNN_FILT + (PRE_CNN_FILT_PAD<<1) + 1; // Depth pad = 2 for kernel size =5. SAME PAD
+  float* cnn1_out = (float*)malloc(out_time * PRE_CNN_O_F * sizeof(float));
+  // Since bnorm is the first layer and in-place will alter input. Use only if input can be discarded/altered. Else avoid inplace
+  phon_pred_lr_cnn(cnn1_out, mem_buf, in_time, PRE_CNN_I_F,
     BNORM_CNN1_MEAN, BNORM_CNN1_VAR, 0, 0, 0, PRE_CNN_BNORM_INPLACE,
     PRE_CNN_O_F, PRE_CNN_FILT_PAD, PRE_CNN_FILT,
     &conv_params, PRE_CNN_FILT_ACT); // regular tanh activation
 
-  batchnorm1d(0, cnn1_out, in_T, RNN_I_F, 
+  batchnorm1d(0, cnn1_out, in_time, RNN_I_F, 
     BNORM_RNN_MEAN, BNORM_RNN_VAR, 0, 0, 0, 1, 0.00001); // Currently In-place only
 
   /* Bricked Bi-FastGRNN Block */
-  int rnn_hidden = RNN_O_F>>1, out_index = 0;
 
-  out_T = in_T/HOP + 1;
-  float* temp_hiddenstate = (float*)calloc(rnn_hidden, sizeof(float));
-  float* rnn_out = (float*)malloc(out_T * RNN_O_F * sizeof(float));
-  // Forward Pass
-  for (int t = 0; t < FWD_WINDOW; t++) {
-    fastgrnn_lr(temp_hiddenstate, rnn_hidden,
-      cnn1_out + (t * RNN_I_F) , RNN_I_F, 1,
-      &fwd_RNN_params, &buffers, 0, 0);
-    if (t % HOP==0)
-      memcpy(rnn_out + ((out_index++)*RNN_O_F), temp_hiddenstate, rnn_hidden*sizeof(float));
-  }
-  memcpy(rnn_out + ((out_index++)*RNN_O_F), temp_hiddenstate, rnn_hidden*sizeof(float));
-  for (int t = HOP; t <= in_T - FWD_WINDOW; t += HOP ) {
-    memset(temp_hiddenstate, 0, rnn_hidden*sizeof(float));
-    fastgrnn_lr(temp_hiddenstate, rnn_hidden,
-      cnn1_out + (t * RNN_I_F) , RNN_I_F, FWD_WINDOW,
-      &fwd_RNN_params, &buffers, 0, 0);
-    memcpy(rnn_out + ((out_index++)*RNN_O_F), temp_hiddenstate, rnn_hidden*sizeof(float));    
-  }
+  out_time = in_time/HOP + 1;
+  float* rnn_out = (float*)malloc(out_time * RNN_O_F * sizeof(float));
+  forward_bricked_rnn(rnn_out, RNN_O_F>>1, cnn1_out,
+    in_time, RNN_I_F, FWD_WINDOW, HOP,
+    fastgrnn_lr, &fwd_RNN_params, &buffers,
+    BI_DIR, SAMPLE_FIRST_BRICK, 0);
 
-  // Backward Pass
-  out_index = 0;
-  for (int t = 0; t < in_T - BWD_WINDOW; t += HOP ) {
-    memset(temp_hiddenstate, 0, rnn_hidden*sizeof(float));
-    fastgrnn_lr(temp_hiddenstate, rnn_hidden,
-      cnn1_out + (t * RNN_I_F) , RNN_I_F, BWD_WINDOW,
-      &bwd_RNN_params, &buffers, 1, 0);
-    memcpy(rnn_out + ((out_index++)*RNN_O_F + rnn_hidden), temp_hiddenstate, rnn_hidden*sizeof(float));
-  }
-  out_index += BWD_WINDOW/HOP;
-  memset(temp_hiddenstate, 0, rnn_hidden*sizeof(float));
-  for (int t = in_T - 1; t >= in_T - BWD_WINDOW; t--) {
-    fastgrnn_lr(temp_hiddenstate, rnn_hidden,
-      cnn1_out + (t * RNN_I_F) , RNN_I_F, 1,
-      &bwd_RNN_params, &buffers, 0, 0);
-    if ((in_T - 1 - t) % HOP == 0)
-      memcpy(rnn_out + ((out_index--)*RNN_O_F + rnn_hidden), temp_hiddenstate, rnn_hidden*sizeof(float));
-  }
-  memcpy(rnn_out + ((out_index)*RNN_O_F + rnn_hidden), temp_hiddenstate, rnn_hidden*sizeof(float));
-  free(temp_hiddenstate);
-
+  backward_bricked_rnn(rnn_out + (RNN_O_F>>1), RNN_O_F>>1, cnn1_out,
+    in_time, RNN_I_F, BWD_WINDOW, HOP,
+    fastgrnn_lr, &bwd_RNN_params, &buffers,
+    BI_DIR, SAMPLE_LAST_BRICK, 0);
   free(cnn1_out);
 
   /* Post-CNN */
   // Since all inputs to the subsequent layers are temporary, in-place bnorm can be used without any input/output data alteration
   // CNN2
-  in_T = out_T;
-  out_T = in_T - POST_CNN_DEPTH_FILT + (POST_CNN_DEPTH_PAD<<1) + 1;
-  out_T = out_T - POST_CNN_POOL + (POST_CNN_POOL_PAD<<1) + 1;
-  float* cnn2_out = (float*)malloc(out_T * POST_CNN_INTER_F * sizeof(float));
-  dscnn_depth_point_lr(cnn2_out, rnn_out, in_T, POST_CNN_INTER_F,
+  in_time = out_time;
+  out_time = in_time - POST_CNN_DEPTH_FILT + (POST_CNN_DEPTH_PAD<<1) + 1;
+  out_time = out_time - POST_CNN_POOL + (POST_CNN_POOL_PAD<<1) + 1;
+  float* cnn2_out = (float*)malloc(out_time * POST_CNN_INTER_F * sizeof(float));
+  phon_pred_depth_point_lr_cnn(cnn2_out, rnn_out, in_time, POST_CNN_INTER_F,
     CNN2_BNORM_MEAN, CNN2_BNORM_VAR, 0, 0, 0, POST_CNN_BNORM_INPLACE,
     POST_CNN_INTER_F>>1, POST_CNN_DEPTH_PAD, POST_CNN_DEPTH_FILT,
     &depth_param_2, POST_CNN_DEPTH_ACT,
@@ -213,11 +198,11 @@ void key_word_spotting(float* mem_buf) {
   free(rnn_out);
 
   // CNN3
-  in_T = out_T;
-  out_T = in_T - POST_CNN_DEPTH_FILT + (POST_CNN_DEPTH_PAD<<1) + 1;
-  out_T = out_T - POST_CNN_POOL + (POST_CNN_POOL_PAD<<1) + 1;
-  float* cnn3_out = (float*)malloc(out_T * POST_CNN_INTER_F * sizeof(float));
-  dscnn_depth_point_lr(cnn3_out, cnn2_out, in_T, POST_CNN_INTER_F,
+  in_time = out_time;
+  out_time = in_time - POST_CNN_DEPTH_FILT + (POST_CNN_DEPTH_PAD<<1) + 1;
+  out_time = out_time - POST_CNN_POOL + (POST_CNN_POOL_PAD<<1) + 1;
+  float* cnn3_out = (float*)malloc(out_time * POST_CNN_INTER_F * sizeof(float));
+  phon_pred_depth_point_lr_cnn(cnn3_out, cnn2_out, in_time, POST_CNN_INTER_F,
     CNN3_BNORM_MEAN, CNN3_BNORM_VAR, 0, 0, 0, POST_CNN_BNORM_INPLACE,
     POST_CNN_INTER_F>>1, POST_CNN_DEPTH_PAD, POST_CNN_DEPTH_FILT,
     &depth_param_3, POST_CNN_DEPTH_ACT,
@@ -227,11 +212,11 @@ void key_word_spotting(float* mem_buf) {
   free(cnn2_out);
 
   // CNN4
-  in_T = out_T;
-  out_T = in_T - POST_CNN_DEPTH_FILT + (POST_CNN_DEPTH_PAD<<1) + 1;
-  out_T = out_T - POST_CNN_POOL + (POST_CNN_POOL_PAD<<1) + 1;
-  float* cnn4_out = (float*)malloc(out_T * POST_CNN_INTER_F * sizeof(float));
-  dscnn_depth_point_lr(cnn4_out, cnn3_out, in_T, POST_CNN_INTER_F,
+  in_time = out_time;
+  out_time = in_time - POST_CNN_DEPTH_FILT + (POST_CNN_DEPTH_PAD<<1) + 1;
+  out_time = out_time - POST_CNN_POOL + (POST_CNN_POOL_PAD<<1) + 1;
+  float* cnn4_out = (float*)malloc(out_time * POST_CNN_INTER_F * sizeof(float));
+  phon_pred_depth_point_lr_cnn(cnn4_out, cnn3_out, in_time, POST_CNN_INTER_F,
     CNN4_BNORM_MEAN, CNN4_BNORM_VAR, 0, 0, 0, POST_CNN_BNORM_INPLACE,
     POST_CNN_INTER_F>>1, POST_CNN_DEPTH_PAD, POST_CNN_DEPTH_FILT,
     &depth_param_4, POST_CNN_DEPTH_ACT,
@@ -241,11 +226,11 @@ void key_word_spotting(float* mem_buf) {
   free(cnn3_out);
 
   // CNN5
-  in_T = out_T;
-  out_T = in_T - POST_CNN_DEPTH_FILT + (POST_CNN_DEPTH_PAD<<1) + 1;
-  out_T = out_T - POST_CNN_POOL + (POST_CNN_POOL_PAD<<1) + 1;
-  float* pred = (float*)malloc(out_T * POST_CNN_O_F * sizeof(float));
-  dscnn_depth_point_lr(pred, cnn4_out, in_T, POST_CNN_INTER_F,
+  in_time = out_time;
+  out_time = in_time - POST_CNN_DEPTH_FILT + (POST_CNN_DEPTH_PAD<<1) + 1;
+  out_time = out_time - POST_CNN_POOL + (POST_CNN_POOL_PAD<<1) + 1;
+  float* pred = (float*)malloc(out_time * POST_CNN_O_F * sizeof(float));
+  phon_pred_depth_point_lr_cnn(pred, cnn4_out, in_time, POST_CNN_INTER_F,
     CNN5_BNORM_MEAN, CNN5_BNORM_VAR, 0, 0, 0, POST_CNN_BNORM_INPLACE,
     POST_CNN_INTER_F>>1, POST_CNN_DEPTH_PAD, POST_CNN_DEPTH_FILT,
     &depth_param_5, POST_CNN_DEPTH_ACT,
@@ -255,7 +240,7 @@ void key_word_spotting(float* mem_buf) {
   free(cnn4_out);
 
   /* Output Time and Prediction Check. Created for Deugging */
-  if (checkTime(out_T))
+  if (checkTime(out_time))
     return;
   else
     checkError(pred, OUTPUT);
@@ -264,7 +249,7 @@ void key_word_spotting(float* mem_buf) {
 
 int main() {
   clock_t begin = clock();
-  key_word_spotting(INPUT);
+  phoneme_prediction(INPUT);
   clock_t end = clock();
   double time_spent = (float)(end - begin) / CLOCKS_PER_SEC;
   printf("Time elapsed is %f seconds\n", time_spent);

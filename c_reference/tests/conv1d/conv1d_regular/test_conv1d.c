@@ -3,9 +3,9 @@
 
 #include<stdio.h>
 #include<stdlib.h>
-#include"conv_param.h"
-#include"conv1d.h"
-#include"conv_utils.h"
+#include "conv_param.h"
+#include "conv1d.h"
+#include "utils.h"
 
 int main() {
   ConvLayers_Params conv_params = {

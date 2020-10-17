@@ -8,28 +8,22 @@ MODEL_DIR=../models
 SRC_DIR=../src
 IFLAGS = -I $(INCLUDE_DIR) -I $(MODEL_DIR)
 
-all: test_avg_pool test_conv1d test_conv1d_depth test_conv1d_lr test_conv1d_lr_depth test_dscnn_lr test_dscnn_lr_depth_point test_fastgrnn_lr test_rnnpool test_quantized_utils test_quantized_fastgrnn test_quantized_rnnpool test_quantized_mbconv test_quantized_face_detection test_quantized_face_detection_fast test_quantized_face_detection_sparse
+all: test_conv1d test_conv1d_depth test_conv1d_lr test_conv1d_lr_depth test_dscnn_lr test_dscnn_lr_depth_point test_fastgrnn_lr test_rnnpool test_quantized_utils test_quantized_fastgrnn test_quantized_rnnpool test_quantized_mbconv test_quantized_face_detection test_quantized_face_detection_fast test_quantized_face_detection_sparse test_rnn_bricked test_phoneme_det_cnn_rnn
 
-KWS_DIR=kws
-test_keyword_spotting: $(KWS_DIR)/test_keyword_spotting.c $(SRC_DIR)/conv_utils.o $(SRC_DIR)/utils.o $(SRC_DIR)/conv1d.o $(SRC_DIR)/dscnn.o $(SRC_DIR)/fastgrnn.o
+CONV1D_DIR=conv1d
+test_conv1d: $(CONV1D_DIR)/conv1d_regular/test_conv1d.c $(SRC_DIR)/conv1d.o $(SRC_DIR)/utils.o
+	$(CC) -o $@ $^ $(IFLAGS) $(CFLAGS) -lm
+test_conv1d_depth: $(CONV1D_DIR)/conv1d_depthwise/test_conv1d_depth.c $(SRC_DIR)/conv1d.o $(SRC_DIR)/utils.o
+	$(CC) -o $@ $^ $(IFLAGS) $(CFLAGS) -lm
+test_conv1d_lr: $(CONV1D_DIR)/conv1d_lr/test_conv1d_lr.c $(SRC_DIR)/conv1d.o $(SRC_DIR)/utils.o
+	$(CC) -o $@ $^ $(IFLAGS) $(CFLAGS) -lm
+test_conv1d_lr_depth: $(CONV1D_DIR)/conv1d_lr_depthwise/test_conv1d_lr_depth.c $(SRC_DIR)/conv1d.o $(SRC_DIR)/utils.o
 	$(CC) -o $@ $^ $(IFLAGS) $(CFLAGS) -lm
 
 DSCNN_DIR=dscnn
-test_dscnn_lr: $(DSCNN_DIR)/test_dscnn_lr.c $(SRC_DIR)/conv_utils.o $(SRC_DIR)/utils.o $(SRC_DIR)/conv1d.o $(SRC_DIR)/dscnn.o
+test_dscnn_lr: $(DSCNN_DIR)/test_dscnn_lr.c $(SRC_DIR)/utils.o $(SRC_DIR)/conv1d.o $(SRC_DIR)/dscnn.o
 	$(CC) -o $@ $^ $(IFLAGS) $(CFLAGS) -lm
-test_dscnn_lr_depth_point : $(DSCNN_DIR)/test_dscnn_lr_depth_point.c $(SRC_DIR)/utils.o $(SRC_DIR)/conv_utils.o $(SRC_DIR)/conv1d.o $(SRC_DIR)/dscnn.o
-	$(CC) -o $@ $^ $(IFLAGS) $(CFLAGS) -lm
-
-CONV1D_DIR=conv1d
-test_conv1d: $(CONV1D_DIR)/conv1d_regular/test_conv1d.c $(SRC_DIR)/conv_utils.o $(SRC_DIR)/conv1d.o $(SRC_DIR)/utils.o
-	$(CC) -o $@ $^ $(IFLAGS) $(CFLAGS) -lm
-test_conv1d_depth: $(CONV1D_DIR)/conv1d_depthwise/test_conv1d_depth.c $(SRC_DIR)/conv_utils.o $(SRC_DIR)/conv1d.o $(SRC_DIR)/utils.o
-	$(CC) -o $@ $^ $(IFLAGS) $(CFLAGS) -lm
-test_conv1d_lr: $(CONV1D_DIR)/conv1d_lr/test_conv1d_lr.c $(SRC_DIR)/conv_utils.o $(SRC_DIR)/conv1d.o $(SRC_DIR)/utils.o
-	$(CC) -o $@ $^ $(IFLAGS) $(CFLAGS) -lm
-test_conv1d_lr_depth: $(CONV1D_DIR)/conv1d_lr_depthwise/test_conv1d_lr_depth.c $(SRC_DIR)/conv_utils.o $(SRC_DIR)/conv1d.o $(SRC_DIR)/utils.o
-	$(CC) -o $@ $^ $(IFLAGS) $(CFLAGS) -lm
-test_avg_pool: $(CONV1D_DIR)/avg_pool/test_avg_pool.c $(SRC_DIR)/conv_utils.o $(SRC_DIR)/conv1d.o $(SRC_DIR)/utils.o
+test_dscnn_lr_depth_point : $(DSCNN_DIR)/test_dscnn_lr_depth_point.c $(SRC_DIR)/utils.o $(SRC_DIR)/conv1d.o $(SRC_DIR)/dscnn.o
 	$(CC) -o $@ $^ $(IFLAGS) $(CFLAGS) -lm
 
 FASTGRNN_DIR=fastgrnn
@@ -60,10 +54,18 @@ test_quantized_face_detection_fast: $(FACE_DETECTION_DIR)/test_quantized_face_de
 test_quantized_face_detection_sparse: $(FACE_DETECTION_DIR)/test_quantized_face_detection_sparse.c $(SRC_DIR)/quantized_utils.o $(SRC_DIR)/quantized_fastgrnn.o $(SRC_DIR)/quantized_rnnpool.o $(SRC_DIR)/quantized_mbconv.o $(MODEL_DIR)/quantized_face_detection_sparse.o
 	$(CC) -o $@ $^ $(IFLAGS) $(CFLAGS) -Wno-unused-result -lm
 
+RNNBRICKED_DIR=rnn_bricked
+test_rnn_bricked: $(RNNBRICKED_DIR)/test_rnn_bricked.c $(SRC_DIR)/utils.o $(SRC_DIR)/fastgrnn.o $(SRC_DIR)/rnn_bricked.o
+	$(CC) -o $@ $^ $(IFLAGS) $(CFLAGS) -lm
+
+KWS_DIR=kws
+test_phoneme_det_cnn_rnn: $(KWS_DIR)/test_phoneme_det_cnn_rnn.c $(SRC_DIR)/utils.o $(SRC_DIR)/conv1d.o $(SRC_DIR)/dscnn.o $(SRC_DIR)/fastgrnn.o $(SRC_DIR)/rnn_bricked.o
+	$(CC) -o $@ $^ $(IFLAGS) $(CFLAGS) -lm
+
 .PHONY: clean cleanest
 
 clean: 
-	rm -f *.o *.gch test_avg_pool test_conv1d test_conv1d_depth test_conv1d_lr test_conv1d_lr_depth test_dscnn_lr test_dscnn_lr_depth_point test_fastgrnn_lr test_rnnpool test_quantized_utils test_quantized_fastgrnn test_quantized_rnnpool test_quantized_mbconv test_quantized_face_detection test_quantized_face_detection_fast test_quantized_face_detection_sparse test_keyword_spotting
+	rm -f *.o *.gch test_conv1d test_conv1d_depth test_conv1d_lr test_conv1d_lr_depth test_dscnn_lr test_dscnn_lr_depth_point test_fastgrnn_lr test_rnnpool test_quantized_utils test_quantized_fastgrnn test_quantized_rnnpool test_quantized_mbconv test_quantized_face_detection test_quantized_face_detection_fast test_quantized_face_detection_sparse test_rnn_bricked test_phoneme_det_cnn_rnn
 
 cleanest: clean
 	rm *~
