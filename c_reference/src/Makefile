@@ -6,12 +6,9 @@ include ../config.mk
 INCLUDE_DIR=../include
 IFLAGS = -I $(INCLUDE_DIR)
 
-all: dscnn.o conv1d.o conv_utils.o utils.o fastgrnn.o classifier.o rnnpool.o quantized_utils.o quantized_fastgrnn.o quantized_rnnpool.o quantized_mbconv.o 
+all: dscnn.o conv1d.o utils.o fastgrnn.o classifier.o rnnpool.o quantized_utils.o quantized_fastgrnn.o quantized_rnnpool.o quantized_mbconv.o rnn_bricked.o
 
 dscnn.o : dscnn.c
-	$(CC) -o $@ $(IFLAGS) $(CFLAGS) -c $^
-
-conv_utils.o : conv_utils.c
 	$(CC) -o $@ $(IFLAGS) $(CFLAGS) -c $^
 
 conv1d.o : conv1d.c
@@ -27,6 +24,9 @@ classifier.o: classifier.c
 	$(CC) -o $@ $(IFLAGS) $(CFLAGS) -c $^
 
 rnnpool.o: rnnpool.c
+	$(CC) -o $@ $(IFLAGS) $(CFLAGS) -c $^
+
+rnn_bricked.o: rnn_bricked.c
 	$(CC) -o $@ $(IFLAGS) $(CFLAGS) -c $^
 
 quantized_utils.o: quantized_utils.c

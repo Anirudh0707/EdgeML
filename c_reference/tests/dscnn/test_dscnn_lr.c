@@ -3,9 +3,9 @@
 
 #include<stdio.h>
 #include<stdlib.h>
-#include"dscnn_param_lr.h"
-#include"conv1d.h"
-#include"dscnn.h"
+#include "dscnn_param_lr.h"
+#include "conv1d.h"
+#include "dscnn.h"
 
 int main() {
     
@@ -17,11 +17,8 @@ int main() {
   };
 
   float pred[O_T * O_F] = {};
-  // int dscnn_lr(float* output_signal, float* input_signal, unsigned in_T, unsigned in_channels,
-  // float* mean, float* var, unsigned affine, float* gamma, float* beta, unsigned in_place,
-  // unsigned cnn_hidden, int cnn_padding, unsigned cnn_kernel_size,
-  // const void* cnn_params, int cnn_activations)
-  dscnn_lr(pred, INPUT, I_T, I_F,
+
+  phon_pred_lr_cnn(pred, INPUT, I_T, I_F,
     BNORM_CNN1_MEAN, BNORM_CNN1_VAR, 0, 0, 0, 0,
     O_F, 2, FILT,
     &conv_params, 0);

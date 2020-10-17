@@ -3,9 +3,9 @@
 
 #include<stdio.h>
 #include<stdlib.h>
-#include"conv_param_depth.h"
-#include"conv1d.h"
-#include"conv_utils.h"
+#include "conv_param_depth.h"
+#include "conv1d.h"
+#include "utils.h"
 
 int main() {
   ConvLayers_Params conv_params = {
@@ -13,7 +13,7 @@ int main() {
     .B = CONV_BIAS,
   };
 
-  float pred[O_T * I_F] = {};
+  float pred[O_T * O_F] = {};
 
   conv1d_depth(pred, O_T, INPUT, I_T, I_F, PAD, FILT, &conv_params, ACT);
   
@@ -25,7 +25,7 @@ int main() {
       denom += OUTPUT[t * O_F + d] * OUTPUT[t * O_F + d];
     }
   }
-  float avg_error = error/(O_T*I_F);
+  float avg_error = error/(O_T*O_F);
   printf("Testing Depthwise Convolution\n");
   printf("Squared Error : %f \t ; MSE : %f  \n", error, avg_error);
   printf("Relative Squared Error : %f \n", error/denom);

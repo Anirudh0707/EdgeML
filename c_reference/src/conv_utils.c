@@ -17,9 +17,9 @@ int matmul(float* out, float* W1, float* W2, unsigned rank, unsigned I, unsigned
   return 0;
 }
 
-int TanhGate(float* output_signal, float* input_signal, unsigned in_T, unsigned in_channels) {
+int semi_sigmoid_tanh(float* output_signal, float* input_signal, unsigned in_time, unsigned in_channels) {
   unsigned int piv = in_channels>>1;
-  for(int t = 0; t < in_T; t++)
+  for(int t = 0; t < in_time; t++)
     for(int d = 0; d < piv; d++) 
       output_signal[t * piv + d] = sigmoid(input_signal[t * in_channels + d]) * tanh(input_signal[t * in_channels + (d + piv)]);
   return 0;

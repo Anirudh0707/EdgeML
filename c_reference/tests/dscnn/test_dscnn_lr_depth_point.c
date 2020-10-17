@@ -3,9 +3,9 @@
 
 #include<stdio.h>
 #include<stdlib.h>
-#include"dscnn_param_lr_depth_point.h"
-#include"conv1d.h"
-#include"dscnn.h"
+#include "dscnn_param_lr_depth_point.h"
+#include "conv1d.h"
+#include "dscnn.h"
 
 int main() {
     
@@ -23,14 +23,8 @@ int main() {
 
   float pred[O_T * O_F] = {};
 
-  // int dscnn_depth_point_lr(float* output_signal, float* input_signal, unsigned in_T, unsigned in_channels,
-  // float* mean, float* var, unsigned affine, float* gamma, float* beta, unsigned in_place,
-  // unsigned depth_cnn_hidden, int depth_cnn_padding, unsigned depth_cnn_kernel_size,
-  // const void* depth_cnn_params, int depth_cnn_activations,
-  // unsigned point_cnn_hidden, int point_cnn_padding, unsigned point_cnn_kernel_size,
-  // const void* point_cnn_params, int point_cnn_activations,
-  // int pool_padding, unsigned pool_kernel_size, int pool_activation)
-  dscnn_depth_point_lr(pred, INPUT, I_T, I_F,
+
+  phon_pred_depth_point_lr_cnn(pred, INPUT, I_T, I_F,
     BNORM_CNN2_MEAN, BNORM_CNN2_VAR, 0, 0, 0, 1, 
     O_F>>1, 2, DEPTH_FILT, 
     &depth_param, 0, 
