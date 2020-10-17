@@ -13,7 +13,7 @@ int conv1d_lr(float *output_signal, unsigned out_time, unsigned out_channels, co
   const ConvLayers_LR_Params* tparams= (ConvLayers_LR_Params*) params;
   
   float* tempW = (float*)malloc(out_channels * in_channels * kernel_size * sizeof(float));
-  matmul(tempW, tparams->W1, tparams->W2, tparams->rank, out_channels, in_channels * kernel_size);
+  matmul(tparams->W1, tparams->W2, out_channels, tparams->rank,  in_channels * kernel_size, 0, 1.0, tempW);
   // Perform the Convolution
   for (int t = 0; t < out_time; t++) {
     for (int co = 0; co < out_channels; co++) {
@@ -48,7 +48,7 @@ int conv1d_depth_lr(float *output_signal, unsigned out_time, const float *input_
   const ConvLayers_LR_Params* tparams= (ConvLayers_LR_Params*) params;
 
   float* tempW = (float*)malloc(in_channels * kernel_size * sizeof(float));
-  matmul(tempW, tparams->W1, tparams->W2, tparams->rank, in_channels, kernel_size);
+  matmul(tparams->W1, tparams->W2, in_channels, tparams->rank,  kernel_size, 0, 1.0, tempW);
   // Perform the Convolution
   for (int t = 0; t < out_time; t++) {
     for (int ci = 0; ci < in_channels; ci++) {
