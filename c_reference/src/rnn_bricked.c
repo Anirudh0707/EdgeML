@@ -12,7 +12,7 @@ int forward_bricked_rnn(float* output_signal, unsigned rnn_hidden, float* input_
   unsigned in_time, unsigned in_dims, unsigned window, unsigned hop,
   rnn_t rnn, const void* params, void* buffers,
   int bi_direction, int sample_first_brick, int normalize) {
-  int out_index = 0, t;
+  int out_index = 0, t; // t is an index, but we want ot remember the value after the loop. Hence we define it outside
 
   unsigned rnn_assign_offset = rnn_hidden;
   float* temp_hiddenstate = (float*)calloc(rnn_hidden, sizeof(float));
