@@ -70,7 +70,5 @@ c_reference/tests/conv1d/conv1d_depthwise/conv_param_depth.h filter=lfs diff=lfs
 c_reference/tests/kws/precnn_params.h filter=lfs diff=lfs merge=lfs -text
 c_reference/tests/kws/postcnn_params.h filter=lfs diff=lfs merge=lfs -text
 c_reference/tests/kws/rnn_params.h filter=lfs diff=lfs merge=lfs -text
-c_reference/tests/dscnn/dscnn_param_lr.h filter=lfs diff=lfs merge=lfs -text
-c_reference/tests/dscnn/dscnn_param_lr_depth_point.h filter=lfs diff=lfs merge=lfs -text
 c_reference/tests/rnn_bricked/rnn_params.h filter=lfs diff=lfs merge=lfs -text
 c_reference/tests/rnn_bricked/rnn_bricked_io.h filter=lfs diff=lfs merge=lfs -text

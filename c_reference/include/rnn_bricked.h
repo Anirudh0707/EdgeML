@@ -23,7 +23,7 @@ typedef int (*rnn_t)(float* const, unsigned, const float* const, unsigned, unsig
 // For Bi-Directional use, there are 2 constarints
 // 1) (in_time - window) % hop == 0
 // 2) both the window % hop == 0
-// 3) sample_first_brick and sample_last_brick = 0
+// 3) sample_first_brick and sample_last_brick = 1
 //
 // Violation of these constraints can lead to one of the following issues
 // 1) segmenation faults 
