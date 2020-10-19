@@ -10,7 +10,7 @@
 
 int phon_pred_lr_cnn(float* output_signal, float* input_signal, unsigned in_time, unsigned in_channels,
   float* mean, float* var, unsigned affine, float* gamma, float* beta, unsigned in_place,
-  unsigned cnn_hidden, int cnn_padding, unsigned cnn_kernel_size,
+  unsigned cnn_hidden, unsigned cnn_padding, unsigned cnn_kernel_size,
   const void* cnn_params, int cnn_activations) {
   
   unsigned out_time = in_time - cnn_kernel_size + 2*cnn_padding + 1;
@@ -39,11 +39,11 @@ int phon_pred_lr_cnn(float* output_signal, float* input_signal, unsigned in_time
 
 int phon_pred_depth_point_lr_cnn(float* output_signal, float* input_signal, unsigned in_time, unsigned in_channels,
   float* mean, float* var, unsigned affine, float* gamma, float* beta, unsigned in_place,
-  unsigned depth_cnn_hidden, int depth_cnn_padding, unsigned depth_cnn_kernel_size,
+  unsigned depth_cnn_hidden, unsigned depth_cnn_padding, unsigned depth_cnn_kernel_size,
   const void* depth_cnn_params, int depth_cnn_activations,
-  unsigned point_cnn_hidden, int point_cnn_padding, unsigned point_cnn_kernel_size,
+  unsigned point_cnn_hidden, unsigned point_cnn_padding, unsigned point_cnn_kernel_size,
   const void* point_cnn_params, int point_cnn_activations,
-  int pool_padding, unsigned pool_kernel_size, int pool_activation) {
+  unsigned pool_padding, unsigned pool_kernel_size, int pool_activation) {
   
   // Activation
   unsigned out_time;

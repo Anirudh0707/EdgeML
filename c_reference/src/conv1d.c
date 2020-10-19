@@ -7,7 +7,7 @@
 #include "utils.h"
 
 int conv1d_lr(float *output_signal, unsigned out_time, unsigned out_channels, const float *input_signal,
-  unsigned in_time, unsigned in_channels, int padding, unsigned kernel_size,
+  unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
   const void* params, int activations) {
 
   const ConvLayers_LR_Params* tparams= (ConvLayers_LR_Params*) params;
@@ -26,7 +26,7 @@ int conv1d_lr(float *output_signal, unsigned out_time, unsigned out_channels, co
             sum += (input_signal[((tf + t) - padding) * in_channels + ci] * tempW[co * in_channels * kernel_size + ci * kernel_size + tf]);
         }
       }
-      // Post-Conv Activations, more activatiosn can be added as per the necessity
+      // Post-Conv activations. More activations can be added should the necessity arise
       if (activations == 1)
         output_signal[t * out_channels + co] = sigmoid(sum + tparams->B[co]);
       else if (activations == 2)
@@ -42,7 +42,7 @@ int conv1d_lr(float *output_signal, unsigned out_time, unsigned out_channels, co
 }
 
 int conv1d_depth_lr(float *output_signal, unsigned out_time, const float *input_signal,
-  unsigned in_time, unsigned in_channels, int padding, unsigned kernel_size,
+  unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
   const void* params, int activations) {
 
   const ConvLayers_LR_Params* tparams= (ConvLayers_LR_Params*) params;
@@ -59,7 +59,7 @@ int conv1d_depth_lr(float *output_signal, unsigned out_time, const float *input_
         else
           sum += (input_signal[((tf + t) - padding) * in_channels + ci] * tempW[ci * kernel_size + tf]);
       }
-      // Post-Conv Activations, more activatiosn can be added as per the necessity
+      // Post-Conv activations. More activations can be added should the necessity arise
       if (activations == 1)
         output_signal[t * in_channels + ci] = sigmoid(sum + tparams->B[ci]);
       else if (activations == 2)
@@ -77,7 +77,7 @@ int conv1d_depth_lr(float *output_signal, unsigned out_time, const float *input_
 
 
 int conv1d(float *output_signal, unsigned out_time, unsigned out_channels, const float *input_signal,
-  unsigned in_time, unsigned in_channels, int padding, unsigned kernel_size,
+  unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
   const void* params, int activations) {
 
   const ConvLayers_Params* tparams= (ConvLayers_Params*) params;
@@ -94,7 +94,7 @@ int conv1d(float *output_signal, unsigned out_time, unsigned out_channels, const
             sum += (input_signal[((tf + t) - padding) * in_channels + ci] * tparams->W[co * in_channels * kernel_size + ci * kernel_size + tf]);
         }
       }
-      // Post-Conv Activations, more activatiosn can be added as per the necessity
+      // Post-Conv activations. More activations can be added should the necessity arise
       if (activations == 1)
         output_signal[t * out_channels + co] = sigmoid(sum + tparams->B[co]);
       else if (activations == 2)
@@ -109,7 +109,7 @@ int conv1d(float *output_signal, unsigned out_time, unsigned out_channels, const
 }
 
 int conv1d_depth(float *output_signal, unsigned out_time, const float *input_signal,
-  unsigned in_time, unsigned in_channels, int padding, unsigned kernel_size,
+  unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
   const void* params, int activations) {
 
   const ConvLayers_Params* tparams= (ConvLayers_Params*) params;
@@ -124,7 +124,7 @@ int conv1d_depth(float *output_signal, unsigned out_time, const float *input_sig
         else
           sum += (input_signal[((tf + t) - padding) * in_channels + ci] * tparams->W[ci * kernel_size + tf]);
       }
-      // Post-Conv Activations, more activatiosn can be added as per the necessity
+      // Post-Conv activations. More activations can be added should the necessity arise
       if (activations == 1)
         output_signal[t * in_channels + ci] = sigmoid(sum + tparams->B[ci]);
       else if (activations == 2)
@@ -139,9 +139,9 @@ int conv1d_depth(float *output_signal, unsigned out_time, const float *input_sig
 }
 
 int avgpool1d(float *output_signal, unsigned out_time, const float *input_signal, unsigned in_time, unsigned in_channels,
-  int padding, unsigned kernel_size, int activations) {
+  unsigned padding, unsigned kernel_size, int activations) {
 
-  // Iterate over the time steps and averge them. Similar to Conv1D_Dept with a filter kernel full of ones
+  // Iterate over the time steps and average them. Similar to Conv1D_Dept with a filter kernel of ones
   for (int t = 0; t < out_time; t++) {
     for (int ci = 0; ci < in_channels; ci++) {
       float sum = 0;
@@ -168,7 +168,7 @@ int batchnorm1d(float* output_signal, float* input_signal, unsigned in_time, uns
   float* mean, float* var, unsigned affine, float* gamma , float * beta, unsigned in_place, float eps) {
   // Check if affine values are learnt
   if (affine) {
-    // Check for in place computation
+    // Check for in-place computation
     if (in_place) {
       for (int t = 0; t < in_time; t++) {
         for (int d = 0; d < in_channels; d++) {
@@ -185,7 +185,7 @@ int batchnorm1d(float* output_signal, float* input_signal, unsigned in_time, uns
     }
   }
   else {
-      // Check for in place computation
+      // Check for in-place computation
     if (in_place) {
       for (int t = 0; t < in_time; t++) {
         for (int d = 0; d < in_channels; d++) {

@@ -16,10 +16,10 @@
 #include "rnn_params.h"
 #include "postcnn_params.h"
 
-// Check out time steps with label time steps
+// Check number of output time-steps with the number of label time-steps
 int checkTime(unsigned out_time) {
   if (out_time != KWS_OUTPUT_TIME) {
-    printf("Error, Estimated Output and Actual ouput time axis mis-match");
+    printf("Error, estimated output time-steps and actual ouput time-steps mismatch");
     return 1;
   }
   return 0;
@@ -35,24 +35,25 @@ void checkError(float* pred, float* label) {
   }
   float avg_error = error/(KWS_OUTPUT_TIME*POST_CNN_OUTPUT_FEATURES);
   printf("Full Network\n");
-  printf("Aggregate Squared Error : %f   ;   Mean Sqaured Error : %f  \n", error, avg_error);
+  printf("Aggregate Squared Error : %f   ;   Mean Squared Error : %f  \n", error, avg_error);
   printf("RMSE : %f \n", error/denom);
 }
 
 /* CNN-RNN based Phoneme Detection Model
  
-  The phoneme detection model being used consists of 5 blocks.
-  1st block is a CNN, where krenel size is 5.
+  The phoneme detection model used consists of 6 blocks.
+  1st block is a CNN, where kernel size is 5 and regular tanh activation
   2nd block is an RNN, which has a specified forward and a backward context running at a stride/hop of 3.
   Hence it reduces the sequence length by a factor of 3.
-  Rest of the blocks are a combination of CNNs, a depth cnn with a kernel size of 5 and a point cnn with a kernel size of 1
+  Rest of the blocks(3rd, 4th, 5th and 6th) are a combination of CNNs
+  Each of the final 4 blocks consist of a depth cnn (kernel size of 5) and a point cnn (kernel size of 1)
 
-  Input to the architecture is of the form (seq_len, feature_dim) where feature dim refers to n_mels .
-  Output is of the form (seq_len/3, 41) where 41 is the number of phonemes over which classification is done. 
-  Phonemes are predicted for every 3rd time frame, assuming they dont vary faster then that.
+  Input to the architecture is of the form (seq_len, feature_dim) where feature dim refers to n_mels (number of mel features/number of features from the featurizer).
+  Output is of the form (seq_len/3, 41) where 41 is the number of phonemes over which the classification is performed. 
+  Phonemes are predicted for every 3rd time frame, operating under the assumption that they don't vary faster than that.
 
   NOTE: Before deployment for real-time streaming applications, we would need to make minor modification
-  These changes are subject to the input specs i.e fixing buffer time steps, number of features from the featurizer, method of reading into a buffer
+  These changes are subject to the input specs i.e fixing input buffer time steps, number of features from the deployed featurizer, method of reading the input into a buffer
 */
 void phoneme_prediction(float* mem_buf) {
   ConvLayers_LR_Params conv_params = {
@@ -157,14 +158,15 @@ void phoneme_prediction(float* mem_buf) {
   in_time = KWS_INPUT_TIME;
   out_time = in_time - PRE_CNN_FILT + (PRE_CNN_FILT_PAD<<1) + 1; // Depth pad = 2 for kernel size =5. SAME PAD
   float* cnn1_out = (float*)malloc(out_time * PRE_CNN_OUTPUT_FEATURES * sizeof(float));
-  // Since bnorm is the first layer and in-place will alter input. Use only if input can be discarded/altered. Else avoid inplace
+  // Since batchnorm1d is the first layer and in-place will alter the input. 
+  // Use the in-place computation only if the input can be discarded/altered. Else avoid in-place computation for this layer
   phon_pred_lr_cnn(cnn1_out, mem_buf, in_time, PRE_CNN_INPUT_FEATURES,
     BNORM_CNN1_MEAN, BNORM_CNN1_VAR, 0, 0, 0, PRE_CNN_BNORM_INPLACE,
     PRE_CNN_OUTPUT_FEATURES, PRE_CNN_FILT_PAD, PRE_CNN_FILT,
     &conv_params, PRE_CNN_FILT_ACT); // regular tanh activation
 
   batchnorm1d(0, cnn1_out, in_time, RNN_INPUT_FEATURES, 
-    BNORM_RNN_MEAN, BNORM_RNN_VAR, 0, 0, 0, 1, 0.00001); // Currently In-place only and no affine values
+    BNORM_RNN_MEAN, BNORM_RNN_VAR, 0, 0, 0, 1, 0.00001); // Currently in-place only and no affine values
 
   /* Bricked Bi-FastGRNN Block */
 
@@ -182,7 +184,7 @@ void phoneme_prediction(float* mem_buf) {
   free(cnn1_out);
 
   /* Post-CNN */
-  // Since all inputs to the subsequent layers are temporary, in-place bnorm can be used without any input/output data alteration
+  // Since all inputs to the subsequent layers are temporary, in-place batchnorm1d can be used without any input(initial buffer)/output(final layer) data alteration/corruption
   // CNN2
   in_time = out_time;
   out_time = in_time - POST_CNN_DEPTH_FILT + (POST_CNN_DEPTH_PAD<<1) + 1;
@@ -239,7 +241,7 @@ void phoneme_prediction(float* mem_buf) {
     POST_CNN_POOL_PAD, POST_CNN_POOL, POST_CNN_POOL_ACT);
   free(cnn4_out);
 
-  /* Output Time and Prediction Check. Created for Deugging */
+  /* Output Time and Prediction Check. Created for Debugging */
   if (checkTime(out_time))
     return;
   else
