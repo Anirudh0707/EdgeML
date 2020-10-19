@@ -31,14 +31,15 @@ void matVec(const float* const mat, const float* const vec,
   float alpha, float beta,
   float* const ret);
 
-/* Scaled matrix-matrix multiplication: ret = alpha * ret + beat * matA * matB
+/* Scaled matrix-matrix multiplication: ret = alpha * ret + beta * matA * matB
    matA      first matrix; size = nrows * ncommon
    matB      second matrix; size = ncommon * ncols
-   nrows     number of rows in the fist matrix
+   nrows     number of rows in the first matrix
    ncommon   number of columns in the first matrix/number of rows in the second matrix
-   ncols     number of columns on the second matrix
-   alpha,beta are the scalars
-   ret is the output matrix
+   ncols     number of columns in the second matrix
+   alpha     scaling factor for the previously-stored output matrix
+   beta      scaling factor for the result of the multiplication (matA * matB)
+   ret       output matrix
  */
 void matmul(const float* const matA, const float* const matB,
   unsigned nrows, unsigned ncommon, unsigned ncols,
@@ -72,8 +73,8 @@ void softmax(const float* const input, unsigned len, float* const ret);
   Custom non-linear layer
   output_signal    pointer to the output signal, size = out_time * (in_channels/2)
   input_signal     pointer to the input signal. size = in_time * in_channels
-  in_time             number of time steps in the input
-  in_channels      number of input channels. The output will have the half the number of channels. Recommended in_channel % 2 == 0
+  in_time          number of input time steps
+  in_channels      number of input channels. The output will have the half the number of input channels. Necessary for in_channels % 2 == 0
  */
 int semi_sigmoid_tanh(float* output_signal, float* input_signal, unsigned in_time, unsigned in_channels);
 

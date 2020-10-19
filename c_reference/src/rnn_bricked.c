@@ -12,16 +12,16 @@ int forward_bricked_rnn(float* output_signal, unsigned rnn_hidden, float* input_
   unsigned in_time, unsigned in_dims, unsigned window, unsigned hop,
   rnn_t rnn, const void* params, void* buffers,
   int bi_direction, int sample_first_brick, int normalize) {
-  int out_index = 0, t; // t is an index, but we want ot remember the value after the loop. Hence we define it outside
+  int out_index = 0, t; // t is an index, but we want to remember the value after the loop. Hence we define it outside
 
   unsigned rnn_assign_offset = rnn_hidden;
   float* temp_hiddenstate = (float*)calloc(rnn_hidden, sizeof(float));
-  // if bi-directional then the actual output hidden state(allocated space) is twice rnn_hidden
+  // If bi-directional is True(non-zero) then the actual output hidden state(allocated space) is twice rnn_hidden
   // This function only processes the forward context
   if (bi_direction)
     rnn_assign_offset <<= 1;
 
-  // for the first window sample every hop index only if sample_first_block = 1. else the final hidden state is calculated
+  // for the first window, sample every hop index only if sample_first_block = 1. else only the final hidden state is calculated
   for (t = 0; t < window; t++) {
     rnn(temp_hiddenstate, rnn_hidden,
       input_signal + (t * in_dims) , in_dims, 1,
@@ -40,8 +40,8 @@ int forward_bricked_rnn(float* output_signal, unsigned rnn_hidden, float* input_
       params, buffers, 0, normalize);
     memcpy(output_signal + ((out_index++)*rnn_assign_offset), temp_hiddenstate, rnn_hidden*sizeof(float));    
   }
-  // Caculated seperately since, the time steps left need not be equal to window
-  // Hence if the last brick has less than "window" time steps, we only pass those values
+  // Calculated seperately since, the time steps left need not be equal to "window"
+  // Hence if the last brick has less than "window" time steps, we only pass those values by reducing the forward-window length
   memset(temp_hiddenstate, 0, rnn_hidden*sizeof(float));
   rnn(temp_hiddenstate, rnn_hidden,
     input_signal + (t * in_dims) , in_dims, in_time - t,
@@ -58,11 +58,12 @@ int backward_bricked_rnn(float* output_signal, unsigned rnn_hidden, float* input
   int bi_direction, int sample_last_brick, int normalize) {
   int out_index = 0, t;
 
+  // When bi-direction = 1, an offset of "rnn_hidden" will need to be provided during the function call(to the output_signal). 
+  // This is to allocate the results of the backward pass correctly(each of size rnn_hidden, for each time step)
   unsigned rnn_assign_offset = rnn_hidden;
   float* temp_hiddenstate = (float*)calloc(rnn_hidden, sizeof(float));
-  // if bi-directional then the actual output hidden state(allocated space) is twice rnn_hidden
-  // This function only processes the forward context
-  // When bi-direction = 1, an offset of rnn_hidden will need to be provided during the function call, in-order to allocate the backward pass results(of size rnn_hidden for each time step)
+  // If bi-directional is True(non-zero) then the actual output hidden state(allocated space) is twice rnn_hidden
+  // This function only processes the backward context
   if (bi_direction)
     rnn_assign_offset <<= 1;
 

@@ -21,7 +21,7 @@ void errorCheck(float* pred, float* label, unsigned out_time, int out_features) 
     }
   }
   float avg_error = error/(out_time*out_features);
-  printf("Aggregate Squared Error : %f  ;  Mean Sqaured Error : %f  ;  RMSE : %f\n", error, avg_error, error/denom);
+  printf("Aggregate Squared Error : %f  ;  Mean Squared Error : %f  ;  RMSE : %f\n", error, avg_error, error/denom);
 }
 
 void conv1d_check() {
@@ -79,7 +79,7 @@ void conv1d_lr_depth_check() {
   conv1d_depth_lr(pred, CONV1D_LR_DEPTHWISE_OUTPUT_TIME, CONV1D_LR_DEPTHWISE_INPUT,
     CONV1D_LR_DEPTHWISE_INPUT_TIME, CONV1D_LR_DEPTHWISE_INPUT_FEATURES, CONV1D_LR_DEPTHWISE_PAD, CONV1D_LR_DEPTHWISE_FILT,
     &conv_params, CONV1D_LR_DEPTHWISE_ACT);
-  printf("Testing Low Rank Depthwise Convolution\n");
+  printf("Testing Low-Rank Depthwise Convolution\n");
   errorCheck(pred, CONV1D_LR_DEPTHWISE_OUTPUT, CONV1D_LR_DEPTHWISE_OUTPUT_TIME, CONV1D_LR_DEPTHWISE_OUTPUT_FEATURES);
   free(pred);
 }
