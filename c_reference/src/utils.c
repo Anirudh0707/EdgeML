@@ -76,9 +76,9 @@ void matmul(const float* const matA, const float* const matB,
   float alpha, float beta,
   float* const ret) {
   for (unsigned row = 0; row < nrows; row++) {
-    for(unsigned col = 0; col < ncols; col++) {
+    for (unsigned col = 0; col < ncols; col++) {
       float sum = 0;
-      for(int k = 0; k < ncommon; k++)
+      for (int k = 0; k < ncommon; k++)
         sum += (matA[row * ncommon + k] * matB[k * ncols + col]);
       ret[row * ncols + col] = alpha * ret[row * ncols + col] + beta * sum;
     }
@@ -135,11 +135,13 @@ void softmax(const float* const input, unsigned len, float* const ret) {
     ret[i] = expf(input[i] - offset);
 }
 
-int semi_sigmoid_tanh(float* output_signal, float* input_signal, unsigned in_time, unsigned in_channels) {
-  unsigned int piv = in_channels>>1;
-  for(int t = 0; t < in_time; t++) {
-    for(int d = 0; d < piv; d++) {
-      output_signal[t * piv + d] = sigmoid(input_signal[t * in_channels + d]) * tanh(input_signal[t * in_channels + (d + piv)]);
+int semi_sigmoid_tanh(float* output_signal, float* input_signal, 
+  unsigned in_time, unsigned in_channels) {
+  unsigned piv = in_channels >> 1;
+  for (unsigned t = 0; t < in_time; t++) {
+    for (unsigned d = 0; d < piv; d++) {
+      output_signal[t * piv + d] = sigmoid(input_signal[t * in_channels + d]) 
+                                   * tanh(input_signal[t * in_channels + d + piv]);
     }
   }
   return 0;
