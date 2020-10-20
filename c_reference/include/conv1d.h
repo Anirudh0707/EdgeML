@@ -6,7 +6,7 @@
 
 /**
  * @brief Model parameters for the 1D Convolution Layer
- * @var   W    pointer to convolution weights W, size for regular = out_channels*in_channels*kernel_size, size for depth based = out_channels*kernel_size
+ * @var   W    pointer to convolution weights W, size for regular = out_channels * in_channels * kernel_size, size for depth based = out_channels * kernel_size
  * @var   B    pointer to the bias vector for the convolution, size = out_channels
  */
 typedef struct ConvLayers_Params {
@@ -25,7 +25,6 @@ typedef struct ConvLayers_Params {
  * @param[in]    padding          padding applied to the input before the conv is performed.
  *                                Note: padding is applied to both the starting and ending of the input, along the time axis
  *                                E.g : padding = 3, the input is padded with zeros(for 3 time steps), both before the input_signal(time step 0) and after the input_signal(time step in_time).
- * 
  * @param[in]    kernel_size      kernel size of the conv filter
  * @param[in]    params           weights, bias and other essential parameters used to describe the layer
  * @param[in]    activations      an integer to choose the type of activation function.
@@ -34,7 +33,7 @@ typedef struct ConvLayers_Params {
  *                                2: tanh
  *                                3: relu
  */
-int conv1d(float *output_signal, unsigned out_time, unsigned out_channels, const float *input_signal, 
+int conv1d(float* output_signal, unsigned out_time, unsigned out_channels, const float* input_signal, 
   unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size, 
   const void* params, int activations);
 
@@ -48,7 +47,6 @@ int conv1d(float *output_signal, unsigned out_time, unsigned out_channels, const
  * @param[in]    padding          padding applied to the input before the conv is performed.
  *                                Note: padding is applied to both the starting and ending of the input, along the time axis
  *                                E.g : padding = 3, the input is padded with zeros(for 3 time steps), both before the input_signal(time step 0) and after the input_signal(time step in_time).
- * 
  * @param[in]    kernel_size      kernel size of the conv filter
  * @param[in]    params           weights, bias and other essential parameters used to describe the layer
  * @param[in]    activations      an integer to choose the type of activation function.
@@ -57,10 +55,9 @@ int conv1d(float *output_signal, unsigned out_time, unsigned out_channels, const
  *                                2: tanh
  *                                3: relu
  */
-int conv1d_depth(float *output_signal, unsigned out_time, const float *input_signal, 
+int conv1d_depth(float* output_signal, unsigned out_time, const float* input_signal, 
   unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size, 
   const void* params, int activations);
-
 
 /**
  * @brief Model parameters for the 1D Low Rank Convolution Layer
@@ -88,7 +85,6 @@ typedef struct ConvLayers_LR_Params {
  * @param[in]    padding          padding applied to the input before the conv is performed.
  *                                Note: padding is applied to both the starting and ending of the input, along the time axis
  *                                E.g : padding = 3, the input is padded with zeros(for 3 time steps), both before the input_signal(time step 0) and after the input_signal(time step in_time).
- * 
  * @param[in]    kernel_size      kernel size of the conv filter
  * @param[in]    params           weights, bias and other essential parameters used to describe the layer
  * @param[in]    activations      an integer to choose the type of activation function.
@@ -97,7 +93,7 @@ typedef struct ConvLayers_LR_Params {
  *                                2: tanh
  *                                3: relu
  */
-int conv1d_lr(float *output_signal, unsigned out_time, unsigned out_channels, const float *input_signal, 
+int conv1d_lr(float* output_signal, unsigned out_time, unsigned out_channels, const float* input_signal, 
   unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size, 
   const void* params, int activations);
 
@@ -112,7 +108,6 @@ int conv1d_lr(float *output_signal, unsigned out_time, unsigned out_channels, co
  * @param[in]    padding          padding applied to the input before the conv is performed.
  *                                Note: padding is applied to both the starting and ending of the input, along the time axis
  *                                E.g : padding = 3, the input is padded with zeros(for 3 time steps), both before the input_signal(time step 0) and after the input_signal(time step in_time).
- * 
  * @param[in]    kernel_size      kernel size of the conv filter
  * @param[in]    params           weights, bias and other essential parameters used to describe the layer
  * @param[in]    activations      an integer to choose the type of activation function.
@@ -121,7 +116,7 @@ int conv1d_lr(float *output_signal, unsigned out_time, unsigned out_channels, co
  *                                2: tanh
  *                                3: relu
  */
-int conv1d_depth_lr(float *output_signal, unsigned out_time, const float *input_signal, 
+int conv1d_depth_lr(float* output_signal, unsigned out_time, const float* input_signal, 
   unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size, 
   const void* params, int activations);
 
@@ -136,7 +131,6 @@ int conv1d_depth_lr(float *output_signal, unsigned out_time, const float *input_
  * @param[in]    padding          padding applied to the input before the conv is performed.
  *                                Note: padding is applied to both the starting and ending of the input, along the time axis
  *                                E.g : padding = 3, the input is padded with zeros(for 3 time steps), both before the input_signal(time step 0) and after the input_signal(time step in_time).
- * 
  * @param[in]    kernel_size      kernel size of the pool filter
  * @param[in]    activations      an integer to choose the type of activation function.
  *                                0: none
@@ -144,7 +138,8 @@ int conv1d_depth_lr(float *output_signal, unsigned out_time, const float *input_
  *                                2: tanh
  *                                3: relu
  */
-int avgpool1d(float *output_signal, unsigned out_time, const float *input_signal, unsigned in_time, unsigned in_channels, 
+int avgpool1d(float* output_signal, unsigned out_time, const float* input_signal,
+  unsigned in_time, unsigned in_channels,
   unsigned padding, unsigned kernel_size, int activations);
 
 /**
@@ -156,14 +151,14 @@ int avgpool1d(float *output_signal, unsigned out_time, const float *input_signal
  * @param[in]    mean             pointer to the mean for the batch normalization, size = in_channels
  * @param[in]    var              pointer to the variance for the batch normalization, size = in_channels
  * @param[in]    affine           whether the affine operations are applied
- * @param[in]    gamma            pointer to the scaling factors for the post-norm affine operation, size = in_channels
- * @param[in]    beta             pointer to the scalar offsets for the post-norm affine operation, size = in_channels
+ * @param[in]    gamma            pointer to the scaling factors for the post-norm affine operation, size = in_channels. Provide Null/0 if affine is False(non-zero)
+ * @param[in]    beta             pointer to the offsets for the post-norm affine operation, size = in_channels. Provide Null/0 if affine is False(non-zero)
  * @param[in]    in_place         in-place computation of the batchnorm i.e. the output is stored in-place of the input signal. Storage efficient
  * @param[in]    eps              a very small +ve value to avoid division by 0. For the default value, assign = 0.00001
- * 
- * NOTE: if affine is equated to False(0), then null-pointers(or 0) can be passed for the gamma and beta arguments
  */
-int batchnorm1d(float* output_signal, float* input_signal, unsigned in_time, unsigned in_channels, 
-  float* mean, float* var, unsigned affine, float* gamma , float * beta, unsigned in_place, float eps);
+int batchnorm1d(float* output_signal, float* input_signal,
+  unsigned in_time, unsigned in_channels,
+  float* mean, float* var, unsigned affine, float* gamma , float* beta,
+  unsigned in_place, float eps);
 
 #endif

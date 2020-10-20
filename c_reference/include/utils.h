@@ -39,7 +39,7 @@ void matVec(const float* const mat, const float* const vec,
    ncols     number of columns in the second matrix
    alpha     scaling factor for the previously-stored output matrix
    beta      scaling factor for the result of the multiplication (matA * matB)
-   ret       output matrix
+   ret       matrix multiplication output
  */
 void matmul(const float* const matA, const float* const matB,
   unsigned nrows, unsigned ncommon, unsigned ncols,
@@ -69,13 +69,14 @@ unsigned argmax(const float* const vec, unsigned len);
 // ret[i] = exp(input[i]) / \sum_i exp(input[i])
 void softmax(const float* const input, unsigned len, float* const ret);
 
-/**
-  Custom non-linear layer
-  output_signal    pointer to the output signal, size = out_time * (in_channels/2)
-  input_signal     pointer to the input signal. size = in_time * in_channels
-  in_time          number of input time steps
-  in_channels      number of input channels. The output will have the half the number of input channels. Necessary for in_channels % 2 == 0
+/* Custom non-linear layer for the phoneme detection model. It can be used for other time-series problems if necessary
+   output_signal    pointer to the output signal, size = out_time * (in_channels / 2)
+   input_signal     pointer to the input signal. size = in_time * in_channels
+   in_time          number of input time steps
+   in_channels      number of input channels. The output will have the half the number of input channels. 
+                    Necessary for in_channels % 2 == 0
  */
-int semi_sigmoid_tanh(float* output_signal, float* input_signal, unsigned in_time, unsigned in_channels);
+int semi_sigmoid_tanh(float* output_signal, float* input_signal,
+  unsigned in_time, unsigned in_channels);
 
 #endif

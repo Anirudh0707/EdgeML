@@ -5,7 +5,8 @@
 #define __RNN_BRICKED_H__
 
 // Function Pointer for the RNN to be passed as a parameter
-typedef int (*rnn_t)(float* const, unsigned, const float* const, unsigned, unsigned, const void*, void*, int, int);
+typedef int (*rnn_t)(float* const, unsigned, const float* const, unsigned, 
+                      unsigned, const void*, void*, int, int);
 
 // NOTES for bi-direction
 // If bi_direction = 1, then actual rnn_output_dims is twice the rnn_hidden(rnn_hidden is output dims for each cell). 
@@ -33,7 +34,7 @@ typedef int (*rnn_t)(float* const, unsigned, const float* const, unsigned, unsig
 // These constraints can be ignored while performing uni-directional passes. However, it is favorable to follow constraints 1 and 2
 
 
-/** Forward Bricking and application of the forward rnn for an input signal
+/** Forward Bricking and application of the forward RNN for an input signal
  * @param[out]       output_signal        pointer to output signal. size = out_time * rnn_hidden
  * @param[in]        rnn_hidden           output dimension for the current cell
  * @param[in]        input_signal         pointer to input signal. size = in_time * in_dims
@@ -41,20 +42,20 @@ typedef int (*rnn_t)(float* const, unsigned, const float* const, unsigned, unsig
  * @param[in]        in_dims              input dimensions
  * @param[in]        window               window length for each brick. For the final brick, the left over time steps are used(need not be window in length for the last brick) 
  * @param[in]        hop                  hop distance for between bricks
- * @param[in]        rnn                  function pointer to the rnn
- * @param[in]        params               pointer to the parameters for the rnn
- * @param[in,out]    buffers              pointer to buffer for the rnn
- * @param[in]        bi_direction         determine if the ouput if for a bi-directional rnn. 
+ * @param[in]        rnn                  function pointer to the RNN
+ * @param[in]        params               pointer to the parameters for the RNN
+ * @param[in,out]    buffers              pointer to buffer for the RNN
+ * @param[in]        bi_direction         determine if the ouput if for a bi-directional RNN. 
  * @param[in]        sample_first_brick   determine if the 1st brick should also be sampled
- *                   -> if = 0, only the last hidden state of each brick is sampled. out_time = (in_time-window)/hop + 1
- *                   -> if = 1, for the 1st brick, we sample every hop index(similar to ::hop). For all the bricks(including the 1st) we sample the final hiddens state. out_time = in_time/hop + 1
+ *                                        -> if = 0, only the last hidden state of each brick is sampled. out_time = (in_time-window)/hop + 1
+ *                                        -> if = 1, for the 1st brick, we sample every hop index(similar to ::hop). For all the bricks(including the 1st) we sample the final hiddens state. out_time = in_time/hop + 1
  */
 int forward_bricked_rnn(float* output_signal, unsigned rnn_hidden, float* input_signal,
   unsigned in_time, unsigned in_dims, unsigned window, unsigned hop,
   rnn_t rnn, const void* params, void* buffers,
   int bi_direction, int sample_first_brick, int normalize);
 
-/** Backward Bricking and application of the backward rnn for an input signal
+/** Backward Bricking and application of the backward RNN for an input signal
  * @param[out]       output_signal        pointer to output signal. size = out_time * rnn_hidden
  * @param[in]        rnn_hidden           output dimension for the current cell
  * @param[in]        input_signal         pointer to input signal. size = in_time * in_dims
@@ -62,13 +63,13 @@ int forward_bricked_rnn(float* output_signal, unsigned rnn_hidden, float* input_
  * @param[in]        in_dims              input dimensions
  * @param[in]        window               window length for each brick. For the final brick, the left over time steps are used(need not be window in length for the last brick)
  * @param[in]        hop                  hop distance for between bricks
- * @param[in]        rnn                  function pointer to the rnn
- * @param[in]        params               pointer to the parameters for the rnn
- * @param[in,out]    buffers              pointer to buffer for the rnn
- * @param[in]        bi_direction         determine if the ouput if for a bi-directional rnn. 
- * @param[in]        sample_last_brick   determine if the last brick should also be sampled
- *                   -> if = 0, only the first(last in reverse) hidden state of each brick is sampled. out_time = (in_time-window)/hop + 1
- *                   -> if = 1, for the last brick, we sample every hop index in reverse(similar to ::hop in reverse). For all the bricks(including the last) we sample the first hiddens state(last in reverse). out_time = in_time/hop + 1
+ * @param[in]        rnn                  function pointer to the RNN
+ * @param[in]        params               pointer to the parameters for the RNN
+ * @param[in,out]    buffers              pointer to buffer for the RNN
+ * @param[in]        bi_direction         determine if the ouput if for a bi-directional RNN. 
+ * @param[in]        sample_last_brick    determine if the last brick should also be sampled
+ *                                        -> if = 0, only the first(last in reverse) hidden state of each brick is sampled. out_time = (in_time-window)/hop + 1
+ *                                        -> if = 1, for the last brick, we sample every hop index in reverse(similar to ::hop in reverse). For all the bricks(including the last) we sample the first hiddens state(last in reverse). out_time = in_time/hop + 1
  */
 int backward_bricked_rnn(float* output_signal, unsigned rnn_hidden, float* input_signal,
   unsigned in_time, unsigned in_dims, unsigned window, unsigned hop,

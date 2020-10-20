@@ -1,10 +1,10 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license.
 
-#include<stdio.h>
-#include<stdlib.h>
-#include<string.h>
-#include<time.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 #include "conv1d.h"
 #include "dscnn.h"
 #include "fastgrnn.h"
@@ -18,8 +18,8 @@
 
 // Check number of output time-steps with the number of label time-steps
 int checkTime(unsigned out_time) {
-  if (out_time != KWS_OUTPUT_TIME) {
-    printf("Error, estimated output time-steps and actual ouput time-steps mismatch");
+  if (out_time != KWS_OUT_TIME) {
+    printf("Error, estimated and actual ouput time-steps mismatch");
     return 1;
   }
   return 0;
@@ -27,16 +27,20 @@ int checkTime(unsigned out_time) {
 // Error Check
 void checkError(float* pred, float* label) {
   float error = 0, denom = 0;
-  for (int t = 0; t < KWS_OUTPUT_TIME; t++) {
-    for (int d = 0; d < POST_CNN_OUTPUT_FEATURES; d++) {
-      error += ((pred[t * POST_CNN_OUTPUT_FEATURES + d]-label[t * POST_CNN_OUTPUT_FEATURES + d])*(pred[t * POST_CNN_OUTPUT_FEATURES + d]-label[t * POST_CNN_OUTPUT_FEATURES + d]));
-      denom += label[t * POST_CNN_OUTPUT_FEATURES + d] * label[t * POST_CNN_OUTPUT_FEATURES + d];
+  for (unsigned t = 0; t < KWS_OUT_TIME; t++) {
+    for (unsigned d = 0; d < POST_CNN_OUT_FEATURES; d++) {
+      error += ((pred[t * POST_CNN_OUT_FEATURES + d] 
+                - label[t * POST_CNN_OUT_FEATURES + d])
+                * (pred[t * POST_CNN_OUT_FEATURES + d] 
+                - label[t * POST_CNN_OUT_FEATURES + d]));
+      denom += label[t * POST_CNN_OUT_FEATURES + d] 
+                * label[t * POST_CNN_OUT_FEATURES + d];
     }
   }
-  float avg_error = error/(KWS_OUTPUT_TIME*POST_CNN_OUTPUT_FEATURES);
   printf("Full Network\n");
-  printf("Aggregate Squared Error : %f   ;   Mean Squared Error : %f  \n", error, avg_error);
-  printf("RMSE : %f \n", error/denom);
+  printf("Agg Squared Error : %f\n", error);
+  printf("MSE : %f\n", error / (KWS_OUT_TIME*POST_CNN_OUT_FEATURES));
+  printf("RMSE : %f\n", error / denom);
 }
 
 /* CNN-RNN based Phoneme Detection Model
@@ -141,44 +145,43 @@ void phoneme_prediction(float* mem_buf) {
     .sigmoid_nu   = sigmoid(F_NU)
   };
 
-  float preComp[RNN_INPUT_FEATURES] = { 0.0 };
+  float preComp[RNN_IN_FEATURES] = { 0.0 };
   float tempLRW[RNN_LOW_RANK] = { 0.0 };
   float tempLRU[RNN_LOW_RANK] = { 0.0 };
-  float normFeatures[RNN_INPUT_FEATURES] = { 0.0 };
+  float normFeatures[RNN_IN_FEATURES] = { 0.0 };
   FastGRNN_LR_Buffers buffers = {
     .preComp = preComp,
     .tempLRW = tempLRW,
     .tempLRU = tempLRU,
     .normFeatures = normFeatures
   };
-  
   unsigned in_time, out_time;
 
   /* Pre-CNN */
-  in_time = KWS_INPUT_TIME;
-  out_time = in_time - PRE_CNN_FILT + (PRE_CNN_FILT_PAD<<1) + 1; // Depth pad = 2 for kernel size =5. SAME PAD
-  float* cnn1_out = (float*)malloc(out_time * PRE_CNN_OUTPUT_FEATURES * sizeof(float));
+  in_time = KWS_IN_TIME;
+  out_time = in_time - PRE_CNN_FILT + (PRE_CNN_FILT_PAD << 1) + 1;
+  float* cnn1_out = (float*)malloc(out_time * PRE_CNN_OUT_FEATURES * sizeof(float));
   // Since batchnorm1d is the first layer and in-place will alter the input. 
   // Use the in-place computation only if the input can be discarded/altered. Else avoid in-place computation for this layer
-  phon_pred_lr_cnn(cnn1_out, mem_buf, in_time, PRE_CNN_INPUT_FEATURES,
+  phon_pred_lr_cnn(cnn1_out, mem_buf,
+    in_time, PRE_CNN_IN_FEATURES,
     BNORM_CNN1_MEAN, BNORM_CNN1_VAR, 0, 0, 0, PRE_CNN_BNORM_INPLACE,
-    PRE_CNN_OUTPUT_FEATURES, PRE_CNN_FILT_PAD, PRE_CNN_FILT,
+    PRE_CNN_OUT_FEATURES, PRE_CNN_FILT_PAD, PRE_CNN_FILT,
     &conv_params, PRE_CNN_FILT_ACT); // regular tanh activation
 
-  batchnorm1d(0, cnn1_out, in_time, RNN_INPUT_FEATURES, 
+  batchnorm1d(0, cnn1_out, in_time, RNN_IN_FEATURES, 
     BNORM_RNN_MEAN, BNORM_RNN_VAR, 0, 0, 0, 1, 0.00001); // Currently in-place only and no affine values
 
   /* Bricked Bi-FastGRNN Block */
-
   out_time = in_time/RNN_HOP + 1;
-  float* rnn_out = (float*)malloc(out_time * RNN_OUTPUT_FEATURES * sizeof(float));
-  forward_bricked_rnn(rnn_out, RNN_OUTPUT_FEATURES>>1, cnn1_out,
-    in_time, RNN_INPUT_FEATURES, RNN_FWD_WINDOW, RNN_HOP,
+  float* rnn_out = (float*)malloc(out_time * RNN_OUT_FEATURES * sizeof(float));
+  forward_bricked_rnn(rnn_out, RNN_OUT_FEATURES >> 1, cnn1_out,
+    in_time, RNN_IN_FEATURES, RNN_FWD_WINDOW, RNN_HOP,
     fastgrnn_lr, &fwd_RNN_params, &buffers,
     RNN_BI_DIR, RNN_SAMPLE_FIRST_BRICK, 0);
 
-  backward_bricked_rnn(rnn_out + (RNN_OUTPUT_FEATURES>>1), RNN_OUTPUT_FEATURES>>1, cnn1_out,
-    in_time, RNN_INPUT_FEATURES, RNN_BWD_WINDOW, RNN_HOP,
+  backward_bricked_rnn(rnn_out + (RNN_OUT_FEATURES >> 1), RNN_OUT_FEATURES >> 1, cnn1_out,
+    in_time, RNN_IN_FEATURES, RNN_BWD_WINDOW, RNN_HOP,
     fastgrnn_lr, &bwd_RNN_params, &buffers,
     RNN_BI_DIR, RNN_SAMPLE_LAST_BRICK, 0);
   free(cnn1_out);
@@ -187,12 +190,13 @@ void phoneme_prediction(float* mem_buf) {
   // Since all inputs to the subsequent layers are temporary, in-place batchnorm1d can be used without any input(initial buffer)/output(final layer) data alteration/corruption
   // CNN2
   in_time = out_time;
-  out_time = in_time - POST_CNN_DEPTH_FILT + (POST_CNN_DEPTH_PAD<<1) + 1;
-  out_time = out_time - POST_CNN_POOL + (POST_CNN_POOL_PAD<<1) + 1;
+  out_time = in_time - POST_CNN_DEPTH_FILT + (POST_CNN_DEPTH_PAD << 1) + 1;
+  out_time = out_time - POST_CNN_POOL + (POST_CNN_POOL_PAD << 1) + 1;
   float* cnn2_out = (float*)malloc(out_time * POST_CNN_INTER_FEATURES * sizeof(float));
-  phon_pred_depth_point_lr_cnn(cnn2_out, rnn_out, in_time, POST_CNN_INTER_FEATURES,
+  phon_pred_depth_point_lr_cnn(cnn2_out, rnn_out,
+    in_time, POST_CNN_INTER_FEATURES,
     CNN2_BNORM_MEAN, CNN2_BNORM_VAR, 0, 0, 0, POST_CNN_BNORM_INPLACE,
-    POST_CNN_INTER_FEATURES>>1, POST_CNN_DEPTH_PAD, POST_CNN_DEPTH_FILT,
+    POST_CNN_INTER_FEATURES >> 1, POST_CNN_DEPTH_PAD, POST_CNN_DEPTH_FILT,
     &depth_param_2, POST_CNN_DEPTH_ACT,
     POST_CNN_INTER_FEATURES, POST_CNN_POINT_PAD, POST_CNN_POINT_FILT,
     &point_param_2, POST_CNN_POINT_ACT,
@@ -201,12 +205,13 @@ void phoneme_prediction(float* mem_buf) {
 
   // CNN3
   in_time = out_time;
-  out_time = in_time - POST_CNN_DEPTH_FILT + (POST_CNN_DEPTH_PAD<<1) + 1;
-  out_time = out_time - POST_CNN_POOL + (POST_CNN_POOL_PAD<<1) + 1;
+  out_time = in_time - POST_CNN_DEPTH_FILT + (POST_CNN_DEPTH_PAD << 1) + 1;
+  out_time = out_time - POST_CNN_POOL + (POST_CNN_POOL_PAD << 1) + 1;
   float* cnn3_out = (float*)malloc(out_time * POST_CNN_INTER_FEATURES * sizeof(float));
-  phon_pred_depth_point_lr_cnn(cnn3_out, cnn2_out, in_time, POST_CNN_INTER_FEATURES,
+  phon_pred_depth_point_lr_cnn(cnn3_out, cnn2_out,
+    in_time, POST_CNN_INTER_FEATURES,
     CNN3_BNORM_MEAN, CNN3_BNORM_VAR, 0, 0, 0, POST_CNN_BNORM_INPLACE,
-    POST_CNN_INTER_FEATURES>>1, POST_CNN_DEPTH_PAD, POST_CNN_DEPTH_FILT,
+    POST_CNN_INTER_FEATURES >> 1, POST_CNN_DEPTH_PAD, POST_CNN_DEPTH_FILT,
     &depth_param_3, POST_CNN_DEPTH_ACT,
     POST_CNN_INTER_FEATURES, POST_CNN_POINT_PAD, POST_CNN_POINT_FILT,
     &point_param_3, POST_CNN_POINT_ACT,
@@ -215,12 +220,13 @@ void phoneme_prediction(float* mem_buf) {
 
   // CNN4
   in_time = out_time;
-  out_time = in_time - POST_CNN_DEPTH_FILT + (POST_CNN_DEPTH_PAD<<1) + 1;
-  out_time = out_time - POST_CNN_POOL + (POST_CNN_POOL_PAD<<1) + 1;
+  out_time = in_time - POST_CNN_DEPTH_FILT + (POST_CNN_DEPTH_PAD << 1) + 1;
+  out_time = out_time - POST_CNN_POOL + (POST_CNN_POOL_PAD << 1) + 1;
   float* cnn4_out = (float*)malloc(out_time * POST_CNN_INTER_FEATURES * sizeof(float));
-  phon_pred_depth_point_lr_cnn(cnn4_out, cnn3_out, in_time, POST_CNN_INTER_FEATURES,
+  phon_pred_depth_point_lr_cnn(cnn4_out, cnn3_out,
+    in_time, POST_CNN_INTER_FEATURES,
     CNN4_BNORM_MEAN, CNN4_BNORM_VAR, 0, 0, 0, POST_CNN_BNORM_INPLACE,
-    POST_CNN_INTER_FEATURES>>1, POST_CNN_DEPTH_PAD, POST_CNN_DEPTH_FILT,
+    POST_CNN_INTER_FEATURES >> 1, POST_CNN_DEPTH_PAD, POST_CNN_DEPTH_FILT,
     &depth_param_4, POST_CNN_DEPTH_ACT,
     POST_CNN_INTER_FEATURES, POST_CNN_POINT_PAD, POST_CNN_POINT_FILT,
     &point_param_4, POST_CNN_POINT_ACT,
@@ -229,14 +235,15 @@ void phoneme_prediction(float* mem_buf) {
 
   // CNN5
   in_time = out_time;
-  out_time = in_time - POST_CNN_DEPTH_FILT + (POST_CNN_DEPTH_PAD<<1) + 1;
-  out_time = out_time - POST_CNN_POOL + (POST_CNN_POOL_PAD<<1) + 1;
-  float* pred = (float*)malloc(out_time * POST_CNN_OUTPUT_FEATURES * sizeof(float));
-  phon_pred_depth_point_lr_cnn(pred, cnn4_out, in_time, POST_CNN_INTER_FEATURES,
+  out_time = in_time - POST_CNN_DEPTH_FILT + (POST_CNN_DEPTH_PAD << 1) + 1;
+  out_time = out_time - POST_CNN_POOL + (POST_CNN_POOL_PAD << 1) + 1;
+  float* pred = (float*)malloc(out_time * POST_CNN_OUT_FEATURES * sizeof(float));
+  phon_pred_depth_point_lr_cnn(pred, cnn4_out,
+    in_time, POST_CNN_INTER_FEATURES,
     CNN5_BNORM_MEAN, CNN5_BNORM_VAR, 0, 0, 0, POST_CNN_BNORM_INPLACE,
-    POST_CNN_INTER_FEATURES>>1, POST_CNN_DEPTH_PAD, POST_CNN_DEPTH_FILT,
+    POST_CNN_INTER_FEATURES >> 1, POST_CNN_DEPTH_PAD, POST_CNN_DEPTH_FILT,
     &depth_param_5, POST_CNN_DEPTH_ACT,
-    POST_CNN_OUTPUT_FEATURES, POST_CNN_POINT_PAD, POST_CNN_POINT_FILT,
+    POST_CNN_OUT_FEATURES, POST_CNN_POINT_PAD, POST_CNN_POINT_FILT,
     &point_param_5, POST_CNN_POINT_ACT,
     POST_CNN_POOL_PAD, POST_CNN_POOL, POST_CNN_POOL_ACT);
   free(cnn4_out);

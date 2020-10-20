@@ -1,14 +1,14 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license.
 
-#include<stdio.h>
-#include<stdlib.h>
-#include"rnn_bricked.h"
-#include"fastgrnn.h"
-#include"utils.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include "rnn_bricked.h"
+#include "fastgrnn.h"
+#include "utils.h"
 
-#include"rnn_params.h"
-#include"rnn_bricked_io.h"
+#include "rnn_params.h"
+#include "rnn_bricked_io.h"
 
 int main() {
 
@@ -42,10 +42,10 @@ int main() {
     .sigmoid_nu   = sigmoid(F_NU)
   };
 
-  float preComp[RNN_I_F] = { 0.0 };
+  float preComp[RNN_IN_FEATURES] = { 0.0 };
   float tempLRW[RNN_LOW_RANK] = { 0.0 };
   float tempLRU[RNN_LOW_RANK] = { 0.0 };
-  float normFeatures[RNN_I_F] = { 0.0 };
+  float normFeatures[RNN_IN_FEATURES] = { 0.0 };
   FastGRNN_LR_Buffers buffers = {
     .preComp = preComp,
     .tempLRW = tempLRW,
@@ -53,29 +53,30 @@ int main() {
     .normFeatures = normFeatures
   };
 
-  float pred[O_T * O_F] = {};
+  float pred[RNN_OUT_TIME * RNN_OUT_FEATURES] = {};
 
-  forward_bricked_rnn(pred, RNN_O_F>>1, INPUT,
-    I_T, RNN_I_F, FWD_WINDOW, HOP,
+  forward_bricked_rnn(pred, RNN_OUT_FEATURES >> 1, INPUT,
+    RNN_IN_TIME, RNN_IN_FEATURES, FWD_WINDOW, HOP,
     fastgrnn_lr, &fwd_RNN_params, &buffers,
     1, 1, 0);
 
-  backward_bricked_rnn(pred + (RNN_O_F>>1), RNN_O_F>>1, INPUT,
-    I_T, RNN_I_F, BWD_WINDOW, HOP,
+  backward_bricked_rnn(pred + (RNN_OUT_FEATURES >> 1), RNN_OUT_FEATURES >> 1, INPUT,
+    RNN_IN_TIME, RNN_IN_FEATURES, BWD_WINDOW, HOP,
     fastgrnn_lr, &bwd_RNN_params, &buffers,
     1, 1, 0);
   
   float error = 0;
   float denom = 0;
-  for (int t = 0 ; t < O_T ; t++) {
-    for (int d = 0 ; d < O_F ; d++) {
-      error += ((pred[t * O_F + d] - OUTPUT[t * O_F + d]) * (pred[t * O_F + d] - OUTPUT[t * O_F + d]));
-      denom += OUTPUT[t * O_F + d] * OUTPUT[t * O_F + d] ;
+  for (int t = 0; t < RNN_OUT_TIME; t++) {
+    for (int d = 0; d < RNN_OUT_FEATURES; d++) {
+      error += ((pred[t * RNN_OUT_FEATURES + d] - OUTPUT[t * RNN_OUT_FEATURES + d]) 
+                * (pred[t * RNN_OUT_FEATURES + d] - OUTPUT[t * RNN_OUT_FEATURES + d]));
+      denom += OUTPUT[t * RNN_OUT_FEATURES + d] * OUTPUT[t * RNN_OUT_FEATURES + d];
     }
   }
-  float avg_error = error/(O_T*O_F);
+  float avg_error = error / (RNN_OUT_TIME * RNN_OUT_FEATURES);
+  float rmse = error / denom;
   printf("Testing Bricked RNNs Bi-Directional\n");
-  printf("Squared Error : %f \t ; MSE : %f  \n", error, avg_error);
-  printf("Relative Squared Error : %f \n", error/denom);
-  return 0 ;
+  printf("Agg Squared Error: %f ; MSE: %f ; RMSE: %f\n", error, avg_error, rmse);
+  return 0;
 }
