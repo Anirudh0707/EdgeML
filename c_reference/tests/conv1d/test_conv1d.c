@@ -34,7 +34,7 @@ void conv1d_check() {
   float* pred = (float*)malloc(CONV1D_OUT_TIME * CONV1D_OUT_FEATURES * sizeof(float));
   conv1d(pred, CONV1D_OUT_TIME, CONV1D_OUT_FEATURES, CONV1D_INPUT,
     CONV1D_IN_TIME, CONV1D_IN_FEATURES, CONV1D_PAD, CONV1D_FILT,
-    &conv_params, CONV1D_ACT);
+    &conv_params, CONV1D_STRIDE, CONV1D_ACT);
 
   printf("Testing Regular Convolution\n");
   errorCheck(pred, CONV1D_OUTPUT, CONV1D_OUT_TIME, CONV1D_OUT_FEATURES);
@@ -51,7 +51,7 @@ void conv1d_depth_check() {
                                 * sizeof(float));
   conv1d_depth(pred, CONV1D_DEPTH_OUT_TIME, CONV1D_DEPTH_INPUT,
     CONV1D_DEPTH_IN_TIME, CONV1D_DEPTH_IN_FEATURES, CONV1D_DEPTH_PAD, CONV1D_DEPTH_FILT,
-    &conv_params, CONV1D_DEPTH_ACT);
+    &conv_params, CONV1D_DEPTH_STRIDE, CONV1D_DEPTH_ACT);
   
   printf("Testing Depthwise Convolution\n");
   errorCheck(pred, CONV1D_DEPTH_OUTPUT, 
@@ -71,7 +71,7 @@ void conv1d_lr_check() {
                                 * CONV1D_LR_OUT_FEATURES * sizeof(float));
   conv1d_lr(pred, CONV1D_LR_OUT_TIME, CONV1D_LR_OUT_FEATURES, CONV1D_LR_INPUT,
     CONV1D_LR_IN_TIME, CONV1D_LR_IN_FEATURES, CONV1D_LR_PAD, CONV1D_LR_FILT,
-    &conv_params, CONV1D_LR_ACT);
+    &conv_params, CONV1D_LR_STRIDE, CONV1D_LR_ACT);
   
   printf("Testing Low-Rank Convolution\n");
   errorCheck(pred, CONV1D_LR_OUTPUT, CONV1D_LR_OUT_TIME, CONV1D_LR_OUT_FEATURES);
@@ -91,7 +91,7 @@ void conv1d_lr_depth_check() {
   conv1d_depth_lr(pred, CONV1D_LR_DEPTHWISE_OUT_TIME, CONV1D_LR_DEPTHWISE_INPUT,
     CONV1D_LR_DEPTHWISE_IN_TIME, CONV1D_LR_DEPTHWISE_IN_FEATURES, 
     CONV1D_LR_DEPTHWISE_PAD, CONV1D_LR_DEPTHWISE_FILT,
-    &conv_params, CONV1D_LR_DEPTHWISE_ACT);
+    &conv_params, CONV1D_LR_DEPTHWISE_STRIDE, CONV1D_LR_DEPTHWISE_ACT);
 
   printf("Testing Low-Rank Depthwise Convolution\n");
   errorCheck(pred, CONV1D_LR_DEPTHWISE_OUTPUT, 

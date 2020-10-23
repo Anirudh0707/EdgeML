@@ -20,9 +20,9 @@ typedef int (*rnn_t)(float* const, unsigned, const float* const, unsigned,
 // This use of an offset is a way to exploit the nature of bi-direction to bypass the concatenation step typically associated with bi-directional passes
 //
 // Constraints
-// For Bi-Directional use, there are 2 constraints
-// 1) (in_time - window) % hop == 0
-// 2) both the window % hop == 0
+// For Bi-Directional use, there are 3 constraints
+// 1) (in_time - fwd_window) % hop == 0 and (in_time - bwd_window) % hop == 0
+// 2) fwd_window % hop == 0 and bwd_window % hop == 0
 // 3) sample_first_brick and sample_last_brick = 1
 //
 // Violation of these constraints can lead to one of the following issues

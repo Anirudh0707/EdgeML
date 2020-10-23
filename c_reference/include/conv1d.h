@@ -15,7 +15,7 @@ typedef struct ConvLayers_Params {
 } ConvLayers_Params;
 
 /**
- * @brief Model definition for the 1D Convolution Layer
+ * @brief Model definition for the 1D Convolution Layer. Currently only for dilation = 1
  * @param[out]   output_signal    pointer to the output signal, size = out_time * out_channels
  * @param[in]    out_time         number of time steps in the output
  * @param[in]    out_channels     number of output channels for the output of the conv layer
@@ -27,7 +27,8 @@ typedef struct ConvLayers_Params {
  *                                E.g : padding = 3, the input is padded with zeros(for 3 time steps), both before the input_signal(time step 0) and after the input_signal(time step in_time).
  * @param[in]    kernel_size      kernel size of the conv filter
  * @param[in]    params           weights, bias and other essential parameters used to describe the layer
- * @param[in]    activations      an integer to choose the type of activation function.
+ * @param[in]    stride           stride length for the layer. input_time_iterator += stride for output_time_iterator +=1
+ * @param[in]    activation       an integer to choose the type of activation function.
  *                                0: none
  *                                1: sigmoid
  *                                2: tanh
@@ -35,11 +36,12 @@ typedef struct ConvLayers_Params {
  */
 int conv1d(float* output_signal, unsigned out_time, unsigned out_channels, const float* input_signal, 
   unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size, 
-  const void* params, int activations);
+  const void* params, unsigned stride, int activation);
 
 /**
- * @brief Model definition for the 1D Depthwise Convolution Layer
+ * @brief Model definition for the 1D Depthwise Convolution Layer. Currently only for dilation = 1
  * @param[out]   output_signal    pointer to the output signal, size = out_time * in_channels
+ *                                NOTE: out_channels == in_channels for depthwise
  * @param[in]    out_time         number of time steps in the output
  * @param[in]    input_signal     pointer to the input signal. size = in_time * in_channels
  * @param[in]    in_time          number of time steps in the input
@@ -49,7 +51,8 @@ int conv1d(float* output_signal, unsigned out_time, unsigned out_channels, const
  *                                E.g : padding = 3, the input is padded with zeros(for 3 time steps), both before the input_signal(time step 0) and after the input_signal(time step in_time).
  * @param[in]    kernel_size      kernel size of the conv filter
  * @param[in]    params           weights, bias and other essential parameters used to describe the layer
- * @param[in]    activations      an integer to choose the type of activation function.
+ * @param[in]    stride           stride length for the layer. input_time_iterator += stride for output_time_iterator +=1
+ * @param[in]    activation       an integer to choose the type of activation function.
  *                                0: none
  *                                1: sigmoid
  *                                2: tanh
@@ -57,10 +60,10 @@ int conv1d(float* output_signal, unsigned out_time, unsigned out_channels, const
  */
 int conv1d_depth(float* output_signal, unsigned out_time, const float* input_signal, 
   unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size, 
-  const void* params, int activations);
+  const void* params, unsigned stride, int activation);
 
 /**
- * @brief Model parameters for the 1D Low Rank Convolution Layer
+ * @brief Model parameters for the 1D Low Rank Convolution Layer.
  * @var    W1      pointer to the 1st low-rank component of the weights, size = out_channels * rank
  * @var    W2      pointer to the 2nd low-rank component of the weights, size for regular = rank * in_channels * kernel_size, size for depthwise = rank * kernel_size
  * @var    B       pointer to the bias vector for the convolution, shape = [out_channels]
@@ -74,8 +77,9 @@ typedef struct ConvLayers_LR_Params {
 } ConvLayers_LR_Params;
 
 /**
- * @brief Model definition for the 1D Low-Rank Convolution Layer
+ * @brief Model definition for the 1D Low-Rank Convolution Layer. Currently only for dilation = 1
  * @brief Identical to the non-low-rank form. One modification is the multiplication of the weights handled within the layer
+ * @brief The Weights W1 and W2 are multiplied within the layer using a matmul function from utils. Operation : W1 * W2
  * @param[out]   output_signal    pointer to the output signal, size = out_time * out_channels
  * @param[in]    out_time         number of time steps in the output
  * @param[in]    out_channels     number of output channels for the ouput of the conv layer
@@ -87,7 +91,8 @@ typedef struct ConvLayers_LR_Params {
  *                                E.g : padding = 3, the input is padded with zeros(for 3 time steps), both before the input_signal(time step 0) and after the input_signal(time step in_time).
  * @param[in]    kernel_size      kernel size of the conv filter
  * @param[in]    params           weights, bias and other essential parameters used to describe the layer
- * @param[in]    activations      an integer to choose the type of activation function.
+ * @param[in]    stride           stride length for the layer. input_time_iterator += stride for output_time_iterator +=1
+ * @param[in]    activation       an integer to choose the type of activation function.
  *                                0: none
  *                                1: sigmoid
  *                                2: tanh
@@ -95,12 +100,14 @@ typedef struct ConvLayers_LR_Params {
  */
 int conv1d_lr(float* output_signal, unsigned out_time, unsigned out_channels, const float* input_signal, 
   unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size, 
-  const void* params, int activations);
+  const void* params, unsigned stride, int activation);
 
 /**
- * @brief Model definition for the 1D Low-Rank Depthwise Convolution Layer
+ * @brief Model definition for the 1D Low-Rank Depthwise Convolution Layer. Currently only for dilation = 1
  * @brief Identical to the non-low-rank form. One modification is the multiplication of the weights handled within the layer
+ * @brief The Weights W1 and W2 are multiplied within the layer using a matmul function from utils. Operation : W1 * W2
  * @param[out]   output_signal    pointer to the output signal, size = out_time * in_channels
+ *                                NOTE: out_channels == in_channels for depthwise conv
  * @param[in]    out_time         number of time steps in the output
  * @param[in]    input_signal     pointer to the input signal. size = in_time * in_channels
  * @param[in]    in_time          number of time steps in the input
@@ -110,7 +117,8 @@ int conv1d_lr(float* output_signal, unsigned out_time, unsigned out_channels, co
  *                                E.g : padding = 3, the input is padded with zeros(for 3 time steps), both before the input_signal(time step 0) and after the input_signal(time step in_time).
  * @param[in]    kernel_size      kernel size of the conv filter
  * @param[in]    params           weights, bias and other essential parameters used to describe the layer
- * @param[in]    activations      an integer to choose the type of activation function.
+ * @param[in]    stride           stride length for the layer. input_time_iterator += stride for output_time_iterator +=1
+ * @param[in]    activation       an integer to choose the type of activation function.
  *                                0: none
  *                                1: sigmoid
  *                                2: tanh
@@ -118,12 +126,13 @@ int conv1d_lr(float* output_signal, unsigned out_time, unsigned out_channels, co
  */
 int conv1d_depth_lr(float* output_signal, unsigned out_time, const float* input_signal, 
   unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size, 
-  const void* params, int activations);
+  const void* params, unsigned stride, int activation);
 
 // Auxiliary Layers
 /**
- * @brief Model definition for the 1D Average Pooling Layer
+ * @brief Model definition for the 1D Average Pooling Layer. Currently only for dilation = 1
  * @param[out]   output_signal    pointer to the output signal, size = out_time * in_channels. Provide Null/0 in case of in-place computation
+ *                                NOTE: out_channels == in_channels for avgpool
  * @param[in]    out_time         number of time steps in the output
  * @param[in]    input_signal     pointer to the input signal. size = in_time * in_channels
  * @param[in]    in_time          number of time steps in the input
@@ -132,7 +141,8 @@ int conv1d_depth_lr(float* output_signal, unsigned out_time, const float* input_
  *                                Note: padding is applied to both the starting and ending of the input, along the time axis
  *                                E.g : padding = 3, the input is padded with zeros(for 3 time steps), both before the input_signal(time step 0) and after the input_signal(time step in_time).
  * @param[in]    kernel_size      kernel size of the pool filter
- * @param[in]    activations      an integer to choose the type of activation function.
+ * @param[in]    stride           stride length for the layer. input_time_iterator += stride for output_time_iterator +=1
+ * @param[in]    activation       an integer to choose the type of activation function.
  *                                0: none
  *                                1: sigmoid
  *                                2: tanh
@@ -140,7 +150,7 @@ int conv1d_depth_lr(float* output_signal, unsigned out_time, const float* input_
  */
 int avgpool1d(float* output_signal, unsigned out_time, const float* input_signal,
   unsigned in_time, unsigned in_channels,
-  unsigned padding, unsigned kernel_size, int activations);
+  unsigned padding, unsigned kernel_size, unsigned stride, int activation);
 
 /**
  * @brief Model definition for the 1D batch Normalization Layer

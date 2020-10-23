@@ -21,7 +21,8 @@
  * @param[in]    cnn_padding         padding for the low-rank CNN layer. Note: applied to both sides of the input 
  * @param[in]    cnn_kernel_size     kernel size of the low-rank CNN
  * @param[in]    cnn_params          weights, bias and other essential parameters for the low-rank CNN
- * @param[in]    cnn_activations     an integer to choose the type of activation function.
+ * @param[in]    cnn_stride          stride factor for the low-rank CNN
+ * @param[in]    cnn_activation      an integer to choose the type of activation function.
  *                                   0: none
  *                                   1: sigmoid
  *                                   2: tanh
@@ -31,7 +32,7 @@ int phon_pred_lr_cnn(float* output_signal, float* input_signal,
   unsigned in_time, unsigned in_channels,
   float* mean, float* var, unsigned affine, float* gamma, float* beta, unsigned in_place,
   unsigned cnn_hidden, unsigned cnn_padding, unsigned cnn_kernel_size,
-  const void* cnn_params, int cnn_activations);
+  const void* cnn_params, unsigned cnn_stride, int cnn_activation);
 
 /**
  * @brief Model definition for the 1D Convolution block applied after the RNN
@@ -50,7 +51,8 @@ int phon_pred_lr_cnn(float* output_signal, float* input_signal,
  * @param[in]    depth_cnn_padding      padding for the depth CNN layer. Note: applied to both sides of the input to the depth CNN
  * @param[in]    depth_cnn_kernel_size  kernel size of the depth CNN
  * @param[in]    depth_cnn_params       weights, bias and other essential parameters used to describe the depth CNN
- * @param[in]    depth_cnn_activations  an integer to choose the type of activation function.
+ * @param[in]    depth_cnn_stride       stride factor for the depth CNN
+ * @param[in]    depth_cnn_activation   an integer to choose the type of activation function.
  *                                      0: none
  *                                      1: sigmoid
  *                                      2: tanh
@@ -59,14 +61,16 @@ int phon_pred_lr_cnn(float* output_signal, float* input_signal,
  * @param[in]    point_cnn_padding      padding for the point CNN layer. Note: applied to both sides of the input to the point CNN
  * @param[in]    point_cnn_kernel_size  kernel size of the point CNN
  * @param[in]    point_cnn_params       weights, bias and other essential parameters used to describe the point CNN
- * @param[in]    point_cnn_activations  an integer to choose the type of activation function.
+ * @param[in]    point_cnn_stride       stride factor for the point CNN
+ * @param[in]    point_cnn_activation   an integer to choose the type of activation function.
  *                                      0: none
  *                                      1: sigmoid
  *                                      2: tanh
  *                                      3: relu
  * @param[in]    pool_padding           padding for the pool layer. Note: applied to both sides of the input to the pool 
  * @param[in]    pool_kernel_size       kernel size of the pool
- * @param[in]    pool_activations       an integer to choose the type of activation function.
+ * @param[in]    pool_stride            stride factor for the pool
+ * @param[in]    pool_activation        an integer to choose the type of activation function.
  *                                      0: none
  *                                      1: sigmoid
  *                                      2: tanh
@@ -76,9 +80,9 @@ int phon_pred_depth_point_lr_cnn(float* output_signal, float* input_signal,
   unsigned in_time, unsigned in_channels,
   float* mean, float* var, unsigned affine, float* gamma, float* beta, unsigned in_place,
   unsigned depth_cnn_hidden, unsigned depth_cnn_padding, unsigned depth_cnn_kernel_size,
-  const void* depth_cnn_params, int depth_cnn_activations,
+  const void* depth_cnn_params, unsigned depth_cnn_stride, int depth_cnn_activation,
   unsigned point_cnn_hidden, unsigned point_cnn_padding, unsigned point_cnn_kernel_size,
-  const void* point_cnn_params, int point_cnn_activations,
-  unsigned pool_padding, unsigned pool_kernel_size, int pool_activation);
+  const void* point_cnn_params, unsigned point_cnn_stride, int point_cnn_activation,
+  unsigned pool_padding, unsigned pool_kernel_size, unsigned pool_stride, int pool_activation);
 
 #endif
