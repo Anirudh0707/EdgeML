@@ -8,7 +8,7 @@
 
 int conv1d_lr(float* output_signal, unsigned out_time, unsigned out_channels, const float* input_signal,
   unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
-  const void* params, int activations) {
+  const void* params, unsigned stride, int activation) {
 
   const ConvLayers_LR_Params* tparams= (ConvLayers_LR_Params*) params;
   
@@ -16,32 +16,32 @@ int conv1d_lr(float* output_signal, unsigned out_time, unsigned out_channels, co
   matmul(tparams->W1, tparams->W2, out_channels, tparams->rank,
     in_channels * kernel_size, 0, 1.0, tempW);
   // Perform the Convolution
-  for (unsigned t = 0; t < out_time; t++) {
+  for (unsigned t_in = 0, t_out = 0; t_out < out_time; t_out++, t_in += stride) {
     for (unsigned co = 0; co < out_channels; co++) {
       float sum = 0;
       for (unsigned tf = 0; tf < kernel_size; tf++) {
         for (unsigned ci = 0; ci < in_channels; ci++) {
-          if (((t + tf) < padding) || ((t + tf) >= (in_time + padding))) {
+          if (((t_in + tf) < padding) || ((t_in + tf) >= (in_time + padding))) {
             continue;
           }
           else {
-            sum += (input_signal[((tf + t) - padding) * in_channels + ci] 
+            sum += (input_signal[((tf + t_in) - padding) * in_channels + ci] 
                     * tempW[co * in_channels * kernel_size + ci * kernel_size + tf]);
           }
         }
       }
-      // Post-Conv activations. More activations can be added should the necessity arise
-      if (activations == 1) {
-        output_signal[t * out_channels + co] = sigmoid(sum + tparams->B[co]);
+      // Post-Conv activation. More activation functions can be added should the necessity arise
+      if (activation == 1) {
+        output_signal[t_out * out_channels + co] = sigmoid(sum + tparams->B[co]);
       }
-      else if (activations == 2) {
-        output_signal[t * out_channels + co] = tanh(sum + tparams->B[co]);
+      else if (activation == 2) {
+        output_signal[t_out * out_channels + co] = tanh(sum + tparams->B[co]);
       }
-      else if (activations == 3) {
-        output_signal[t * out_channels + co] = relu(sum + tparams->B[co]);
+      else if (activation == 3) {
+        output_signal[t_out * out_channels + co] = relu(sum + tparams->B[co]);
       }
       else {
-        output_signal[t * out_channels + co] = sum + tparams->B[co];
+        output_signal[t_out * out_channels + co] = sum + tparams->B[co];
       }
     }
   }
@@ -51,7 +51,7 @@ int conv1d_lr(float* output_signal, unsigned out_time, unsigned out_channels, co
 
 int conv1d_depth_lr(float* output_signal, unsigned out_time, const float* input_signal,
   unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
-  const void* params, int activations) {
+  const void* params, unsigned stride, int activation) {
 
   const ConvLayers_LR_Params* tparams= (ConvLayers_LR_Params*) params;
 
@@ -59,30 +59,30 @@ int conv1d_depth_lr(float* output_signal, unsigned out_time, const float* input_
   matmul(tparams->W1, tparams->W2, in_channels,tparams->rank,
     kernel_size, 0, 1.0, tempW);
   // Perform the Convolution
-  for (unsigned t = 0; t < out_time; t++) {
+  for (unsigned t_in = 0, t_out = 0; t_out < out_time; t_out++, t_in += stride) {
     for (unsigned ci = 0; ci < in_channels; ci++) {
       float sum = 0;
       for (unsigned tf = 0; tf < kernel_size; tf++) {
-        if (((t + tf) < padding) || ((t + tf) >= (in_time + padding))) {
+        if (((t_in + tf) < padding) || ((t_in + tf) >= (in_time + padding))) {
           continue;
         }
         else {
-          sum += (input_signal[((tf + t) - padding) * in_channels + ci] 
+          sum += (input_signal[((tf + t_in) - padding) * in_channels + ci] 
                   * tempW[ci * kernel_size + tf]);
         }
       }
-      // Post-Conv activations. More activations can be added should the necessity arise
-      if (activations == 1) {
-        output_signal[t * in_channels + ci] = sigmoid(sum + tparams->B[ci]);
+      // Post-Conv activation. More activation functions can be added should the necessity arise
+      if (activation == 1) {
+        output_signal[t_out * in_channels + ci] = sigmoid(sum + tparams->B[ci]);
       }
-      else if (activations == 2) {
-        output_signal[t * in_channels + ci] = tanh(sum + tparams->B[ci]);
+      else if (activation == 2) {
+        output_signal[t_out * in_channels + ci] = tanh(sum + tparams->B[ci]);
       }
-      else if (activations == 3) {
-        output_signal[t * in_channels + ci] = relu(sum + tparams->B[ci]);
+      else if (activation == 3) {
+        output_signal[t_out * in_channels + ci] = relu(sum + tparams->B[ci]);
       }
       else {
-        output_signal[t * in_channels + ci] = sum + tparams->B[ci];
+        output_signal[t_out * in_channels + ci] = sum + tparams->B[ci];
       }
     }
   }    
@@ -94,37 +94,37 @@ int conv1d_depth_lr(float* output_signal, unsigned out_time, const float* input_
 
 int conv1d(float* output_signal, unsigned out_time, unsigned out_channels, const float* input_signal,
   unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
-  const void* params, int activations) {
+  const void* params, unsigned stride, int activation) {
 
   const ConvLayers_Params* tparams= (ConvLayers_Params*) params;
 
   // Perform the Convolution
-  for (unsigned t = 0; t < out_time; t++) {
+  for (unsigned t_in = 0, t_out = 0; t_out < out_time; t_out++, t_in += stride) {
       for (unsigned co = 0; co < out_channels; co++) {
       float sum = 0;
       for (unsigned tf = 0; tf < kernel_size; tf++) {
         for (unsigned ci = 0; ci < in_channels; ci++) {
-          if (((t + tf) < padding) || ((t + tf) >= (in_time + padding))) {
+          if (((t_in + tf) < padding) || ((t_in + tf) >= (in_time + padding))) {
             continue;
           }
           else {
-            sum += (input_signal[((tf + t) - padding) * in_channels + ci] 
+            sum += (input_signal[((tf + t_in) - padding) * in_channels + ci] 
                     * tparams->W[co * in_channels * kernel_size + ci * kernel_size + tf]);
           }
         }
       }
-      // Post-Conv activations. More activations can be added should the necessity arise
-      if (activations == 1) {
-        output_signal[t * out_channels + co] = sigmoid(sum + tparams->B[co]);
+      // Post-Conv activation. More activation functions can be added should the necessity arise
+      if (activation == 1) {
+        output_signal[t_out * out_channels + co] = sigmoid(sum + tparams->B[co]);
       }
-      else if (activations == 2) {
-        output_signal[t * out_channels + co] = tanh(sum + tparams->B[co]);
+      else if (activation == 2) {
+        output_signal[t_out * out_channels + co] = tanh(sum + tparams->B[co]);
       }
-      else if (activations == 3) {
-        output_signal[t * out_channels + co] = relu(sum + tparams->B[co]);
+      else if (activation == 3) {
+        output_signal[t_out * out_channels + co] = relu(sum + tparams->B[co]);
       }
       else {
-        output_signal[t * out_channels + co] = sum + tparams->B[co];
+        output_signal[t_out * out_channels + co] = sum + tparams->B[co];
       }
     }
   }    
@@ -133,35 +133,35 @@ int conv1d(float* output_signal, unsigned out_time, unsigned out_channels, const
 
 int conv1d_depth(float* output_signal, unsigned out_time, const float* input_signal,
   unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
-  const void* params, int activations) {
+  const void* params, unsigned stride, int activation) {
 
   const ConvLayers_Params* tparams= (ConvLayers_Params*) params;
 
   // Perform the Convolution
-  for (unsigned t = 0; t < out_time; t++) {
+  for (unsigned t_in = 0, t_out = 0; t_out < out_time; t_out++, t_in += stride) {
     for (unsigned ci = 0; ci < in_channels; ci++) {
       float sum = 0;
       for (unsigned tf = 0; tf < kernel_size; tf++) {
-        if (((t + tf) < padding) || ((t + tf) >= (in_time + padding))) {
+        if (((t_in + tf) < padding) || ((t_in + tf) >= (in_time + padding))) {
           continue;
         }
         else {
-          sum += (input_signal[((tf + t) - padding) * in_channels + ci] 
+          sum += (input_signal[((tf + t_in) - padding) * in_channels + ci] 
                   * tparams->W[ci * kernel_size + tf]);
         }
       }
-      // Post-Conv activations. More activations can be added should the necessity arise
-      if (activations == 1) {
-        output_signal[t * in_channels + ci] = sigmoid(sum + tparams->B[ci]);
+      // Post-Conv activation. More activation functions can be added should the necessity arise
+      if (activation == 1) {
+        output_signal[t_out * in_channels + ci] = sigmoid(sum + tparams->B[ci]);
       }
-      else if (activations == 2) {
-        output_signal[t * in_channels + ci] = tanh(sum + tparams->B[ci]);
+      else if (activation == 2) {
+        output_signal[t_out * in_channels + ci] = tanh(sum + tparams->B[ci]);
       }
-      else if (activations == 3) {
-        output_signal[t * in_channels + ci] = relu(sum + tparams->B[ci]);
+      else if (activation == 3) {
+        output_signal[t_out * in_channels + ci] = relu(sum + tparams->B[ci]);
       }
       else {
-        output_signal[t * in_channels + ci] = sum + tparams->B[ci];
+        output_signal[t_out * in_channels + ci] = sum + tparams->B[ci];
       }
     }
   }
@@ -170,31 +170,31 @@ int conv1d_depth(float* output_signal, unsigned out_time, const float* input_sig
 
 int avgpool1d(float* output_signal, unsigned out_time, const float* input_signal,
   unsigned in_time, unsigned in_channels,
-  unsigned padding, unsigned kernel_size, int activations) {
+  unsigned padding, unsigned kernel_size, unsigned stride, int activation) {
 
   // Iterate over the time steps and average them. Similar to Conv1D_Dept with a filter kernel of ones
-  for (unsigned t = 0; t < out_time; t++) {
+  for (unsigned t_in = 0, t_out = 0; t_out < out_time; t_out++, t_in += stride) {
     for (unsigned ci = 0; ci < in_channels; ci++) {
       float sum = 0;
       for (unsigned tf = 0; tf < kernel_size; tf++) {
-        if (((t + tf) < padding) || ((t + tf) >= (in_time + padding))) {
+        if (((t_in + tf) < padding) || ((t_in + tf) >= (in_time + padding))) {
           continue;
         }
         else {
-          sum += (input_signal[((tf + t) - padding) * in_channels + ci]);
+          sum += (input_signal[((tf + t_in) - padding) * in_channels + ci]);
         }
       }
-      if (activations == 1) {
-        output_signal[t * in_channels + ci] = sigmoid(sum / (float)kernel_size);
+      if (activation == 1) {
+        output_signal[t_out * in_channels + ci] = sigmoid(sum / (float)kernel_size);
       }
-      else if (activations == 2) {
-        output_signal[t * in_channels + ci] = tanh(sum / (float)kernel_size);
+      else if (activation == 2) {
+        output_signal[t_out * in_channels + ci] = tanh(sum / (float)kernel_size);
       }
-      else if (activations == 3) {
-        output_signal[t * in_channels + ci] = relu(sum / (float)kernel_size);
+      else if (activation == 3) {
+        output_signal[t_out * in_channels + ci] = relu(sum / (float)kernel_size);
       }
       else {
-        output_signal[t * in_channels + ci] = sum / (float)kernel_size;
+        output_signal[t_out * in_channels + ci] = sum / (float)kernel_size;
       }
     }
   }
