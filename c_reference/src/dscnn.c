@@ -10,9 +10,10 @@
 
 int phon_pred_lr_cnn(float* output_signal, float* input_signal,
   unsigned in_time, unsigned in_channels,
-  float* mean, float* var, unsigned affine, float* gamma, float* beta, unsigned in_place,
+  const float* const mean, const float* const var,
+  unsigned affine, float* gamma, float* beta, unsigned in_place,
   unsigned cnn_hidden, unsigned cnn_padding, unsigned cnn_kernel_size,
-  const void* cnn_params, unsigned cnn_stride, int cnn_activation) {
+  const void* cnn_params, unsigned cnn_stride, unsigned cnn_activation) {
   
   unsigned out_time = in_time - cnn_kernel_size + 2 * cnn_padding + 1;
   if (in_place) {
@@ -44,29 +45,31 @@ int phon_pred_lr_cnn(float* output_signal, float* input_signal,
 
 int phon_pred_depth_point_lr_cnn(float* output_signal, float* input_signal,
   unsigned in_time, unsigned in_channels,
-  float* mean, float* var, unsigned affine, float* gamma, float* beta, unsigned in_place,
-  unsigned depth_cnn_hidden, unsigned depth_cnn_padding, unsigned depth_cnn_kernel_size,
-  const void* depth_cnn_params, unsigned depth_cnn_stride, int depth_cnn_activation,
+  const float* const mean, const float* const var,
+  unsigned affine, const float* const gamma, const float* const beta, unsigned in_place,
+  unsigned depth_cnn_padding, unsigned depth_cnn_kernel_size,
+  const void* depth_cnn_params, unsigned depth_cnn_stride, unsigned depth_cnn_activation,
   unsigned point_cnn_hidden, unsigned point_cnn_padding, unsigned point_cnn_kernel_size,
-  const void* point_cnn_params, unsigned point_cnn_stride, int point_cnn_activation,
-  unsigned pool_padding, unsigned pool_kernel_size, unsigned pool_stride, int pool_activation) {
+  const void* point_cnn_params, unsigned point_cnn_stride, unsigned point_cnn_activation,
+  unsigned pool_padding, unsigned pool_kernel_size, unsigned pool_stride, unsigned pool_activation) {
   
   // Activation
-  unsigned out_time;
+  
   float* act_out= (float*)malloc(in_time * (in_channels >> 1) * sizeof(float));
   semi_sigmoid_tanh(act_out, input_signal, in_time, in_channels);
 
   in_channels >>= 1;
   float* depth_out;
+  unsigned out_time = in_time - depth_cnn_kernel_size + 2 * depth_cnn_padding + 1;
   if (in_place) {
     // Norm
     batchnorm1d(0, act_out,
       in_time, in_channels, 
-      mean, var, affine, gamma, beta,
+      mean, var,
+      affine, gamma, beta,
       in_place, 0.00001);
     // Depth CNN
-    out_time = in_time - depth_cnn_kernel_size + 2 * depth_cnn_padding + 1;
-    depth_out = (float*)malloc(out_time * depth_cnn_hidden * sizeof(float));
+    depth_out = (float*)malloc(out_time * in_channels * sizeof(float));
     conv1d_depth(depth_out, out_time, act_out, 
       in_time, in_channels, depth_cnn_padding, depth_cnn_kernel_size, 
       depth_cnn_params, depth_cnn_stride, depth_cnn_activation);
@@ -77,12 +80,12 @@ int phon_pred_depth_point_lr_cnn(float* output_signal, float* input_signal,
     float* norm_out = (float*)malloc(in_time * in_channels * sizeof(float));
     batchnorm1d(norm_out, act_out,
       in_time, in_channels, 
-      mean, var, affine, gamma, beta,
+      mean, var,
+      affine, gamma, beta,
       in_place, 0.00001);
     free(act_out);
     // Depth CNN
-    out_time = in_time - depth_cnn_kernel_size + 2 * depth_cnn_padding + 1;
-    depth_out = (float*)malloc(out_time * depth_cnn_hidden * sizeof(float));
+    depth_out = (float*)malloc(out_time * in_channels * sizeof(float));
     conv1d_depth(depth_out, out_time, norm_out, 
       in_time, in_channels, depth_cnn_padding, depth_cnn_kernel_size, 
       depth_cnn_params, depth_cnn_stride, depth_cnn_activation);
@@ -94,7 +97,7 @@ int phon_pred_depth_point_lr_cnn(float* output_signal, float* input_signal,
   out_time = in_time - point_cnn_kernel_size + 2 * point_cnn_padding + 1;
   float* point_out = (float*)malloc(out_time * point_cnn_hidden * sizeof(float));
   conv1d_lr(point_out, out_time, point_cnn_hidden, depth_out, 
-    in_time, depth_cnn_hidden, point_cnn_padding, point_cnn_kernel_size, 
+    in_time, in_channels, point_cnn_padding, point_cnn_kernel_size, 
     point_cnn_params, point_cnn_stride, point_cnn_activation);
   free(depth_out);
   

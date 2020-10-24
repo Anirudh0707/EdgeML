@@ -10,8 +10,8 @@
 // Forward Pass
 int forward_bricked_rnn(float* output_signal, unsigned rnn_hidden, float* input_signal,
   unsigned in_time, unsigned in_dims, unsigned window, unsigned hop,
-  rnn_t rnn, const void* params, void* buffers,
-  int bi_direction, int sample_first_brick, int normalize) {
+  rnn_layer rnn, const void* params, void* buffers,
+  unsigned bi_direction, unsigned sample_first_brick, int normalize) {
   unsigned out_index = 0, t; // t is an index, but we want to remember the value after the loop. Hence we define it outside
 
   unsigned rnn_assign_offset = rnn_hidden;
@@ -61,8 +61,8 @@ int forward_bricked_rnn(float* output_signal, unsigned rnn_hidden, float* input_
 // Backward Pass
 int backward_bricked_rnn(float* output_signal, unsigned rnn_hidden, float* input_signal,
   unsigned in_time, unsigned in_dims, unsigned window, unsigned hop,
-  rnn_t rnn, const void* params, void* buffers,
-  int bi_direction, int sample_last_brick, int normalize) {
+  rnn_layer rnn, const void* params, void* buffers,
+  unsigned bi_direction, unsigned sample_last_brick, int normalize) {
   unsigned out_index = 0, t;
 
   // When bi-direction = 1, an offset of "rnn_hidden" will need to be provided during the function call(to the output_signal). 
@@ -88,7 +88,7 @@ int backward_bricked_rnn(float* output_signal, unsigned rnn_hidden, float* input
     out_index += window / hop;
   // If sample_last_block = 1, sample every hop index only for the last window 
   // Else the final hidden state(in reverse) is calculated
-  int stop_time = t;
+  unsigned stop_time = t;
   memset(temp_hiddenstate, 0, rnn_hidden * sizeof(float));
   for (t = in_time - 1; t >= stop_time; t--) {
     rnn(temp_hiddenstate, rnn_hidden,
