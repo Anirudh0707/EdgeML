@@ -76,7 +76,7 @@ void softmax(const float* const input, unsigned len, float* const ret);
    in_channels      number of input channels. The output will have the half the number of input channels. 
                     Necessary for in_channels % 2 == 0
  */
-int semi_sigmoid_tanh(float* output_signal, float* input_signal,
+void semi_sigmoid_tanh(float* output_signal, const float* const input_signal,
   unsigned in_time, unsigned in_channels);
 
 #endif

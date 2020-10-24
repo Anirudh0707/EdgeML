@@ -98,6 +98,7 @@ void conv1d_lr_depth_check() {
               CONV1D_LR_DEPTHWISE_OUT_TIME, CONV1D_LR_DEPTHWISE_OUT_FEATURES);
   free(pred);
 }
+
 int main() {
   conv1d_check();
   conv1d_lr_check();

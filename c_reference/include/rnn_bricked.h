@@ -4,8 +4,8 @@
 #ifndef __RNN_BRICKED_H__
 #define __RNN_BRICKED_H__
 
-// Function Pointer for the RNN to be passed as a parameter
-typedef int (*rnn_t)(float* const, unsigned, const float* const, unsigned, 
+// Function pointer for the RNN to be passed as a parameter
+typedef int (*rnn_layer)(float* const, unsigned, const float* const, unsigned, 
                       unsigned, const void*, void*, int, int);
 
 // NOTES for bi-direction
@@ -52,8 +52,8 @@ typedef int (*rnn_t)(float* const, unsigned, const float* const, unsigned,
  */
 int forward_bricked_rnn(float* output_signal, unsigned rnn_hidden, float* input_signal,
   unsigned in_time, unsigned in_dims, unsigned window, unsigned hop,
-  rnn_t rnn, const void* params, void* buffers,
-  int bi_direction, int sample_first_brick, int normalize);
+  rnn_layer rnn, const void* params, void* buffers,
+  unsigned bi_direction, unsigned sample_first_brick, int normalize);
 
 /** Backward Bricking and application of the backward RNN for an input signal
  * @param[out]       output_signal        pointer to output signal. size = out_time * rnn_hidden
@@ -73,8 +73,8 @@ int forward_bricked_rnn(float* output_signal, unsigned rnn_hidden, float* input_
  */
 int backward_bricked_rnn(float* output_signal, unsigned rnn_hidden, float* input_signal,
   unsigned in_time, unsigned in_dims, unsigned window, unsigned hop,
-  rnn_t rnn, const void* params, void* buffers,
-  int bi_direction, int sample_last_brick, int normalize);
+  rnn_layer rnn, const void* params, void* buffers,
+  unsigned bi_direction, unsigned sample_last_brick, int normalize);
 
 
 #endif

@@ -10,8 +10,8 @@
  * @var   B    pointer to the bias vector for the convolution, size = out_channels
  */
 typedef struct ConvLayers_Params {
-  float* W;
-  float* B;
+  const float* const W;
+  const float* const B;
 } ConvLayers_Params;
 
 /**
@@ -36,7 +36,7 @@ typedef struct ConvLayers_Params {
  */
 int conv1d(float* output_signal, unsigned out_time, unsigned out_channels, const float* input_signal, 
   unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size, 
-  const void* params, unsigned stride, int activation);
+  const void* params, unsigned stride, unsigned activation);
 
 /**
  * @brief Model definition for the 1D Depthwise Convolution Layer. Currently only for dilation = 1
@@ -60,7 +60,7 @@ int conv1d(float* output_signal, unsigned out_time, unsigned out_channels, const
  */
 int conv1d_depth(float* output_signal, unsigned out_time, const float* input_signal, 
   unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size, 
-  const void* params, unsigned stride, int activation);
+  const void* params, unsigned stride, unsigned activation);
 
 /**
  * @brief Model parameters for the 1D Low Rank Convolution Layer.
@@ -70,9 +70,9 @@ int conv1d_depth(float* output_signal, unsigned out_time, const float* input_sig
  * @var    rank    rank of the weight tensor. A low-rank decomposition typically used to reduce computation and storage
  */
 typedef struct ConvLayers_LR_Params {
-  float* W1;
-  float* W2;
-  float* B;
+  const float* const W1;
+  const float* const W2;
+  const float* const B;
   unsigned rank;
 } ConvLayers_LR_Params;
 
@@ -100,7 +100,7 @@ typedef struct ConvLayers_LR_Params {
  */
 int conv1d_lr(float* output_signal, unsigned out_time, unsigned out_channels, const float* input_signal, 
   unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size, 
-  const void* params, unsigned stride, int activation);
+  const void* params, unsigned stride, unsigned activation);
 
 /**
  * @brief Model definition for the 1D Low-Rank Depthwise Convolution Layer. Currently only for dilation = 1
@@ -126,7 +126,7 @@ int conv1d_lr(float* output_signal, unsigned out_time, unsigned out_channels, co
  */
 int conv1d_depth_lr(float* output_signal, unsigned out_time, const float* input_signal, 
   unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size, 
-  const void* params, unsigned stride, int activation);
+  const void* params, unsigned stride, unsigned activation);
 
 // Auxiliary Layers
 /**
@@ -150,7 +150,7 @@ int conv1d_depth_lr(float* output_signal, unsigned out_time, const float* input_
  */
 int avgpool1d(float* output_signal, unsigned out_time, const float* input_signal,
   unsigned in_time, unsigned in_channels,
-  unsigned padding, unsigned kernel_size, unsigned stride, int activation);
+  unsigned padding, unsigned kernel_size, unsigned stride, unsigned activation);
 
 /**
  * @brief Model definition for the 1D batch Normalization Layer
@@ -168,7 +168,8 @@ int avgpool1d(float* output_signal, unsigned out_time, const float* input_signal
  */
 int batchnorm1d(float* output_signal, float* input_signal,
   unsigned in_time, unsigned in_channels,
-  float* mean, float* var, unsigned affine, float* gamma , float* beta,
+  const float* const mean, const float* const var, 
+  unsigned affine, const float* const gamma , const float* const beta,
   unsigned in_place, float eps);
 
 #endif

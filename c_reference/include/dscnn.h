@@ -30,9 +30,10 @@
  */
 int phon_pred_lr_cnn(float* output_signal, float* input_signal,
   unsigned in_time, unsigned in_channels,
-  float* mean, float* var, unsigned affine, float* gamma, float* beta, unsigned in_place,
+  const float* const mean, const float* const var,
+  unsigned affine, float* gamma, float* beta, unsigned in_place,
   unsigned cnn_hidden, unsigned cnn_padding, unsigned cnn_kernel_size,
-  const void* cnn_params, unsigned cnn_stride, int cnn_activation);
+  const void* cnn_params, unsigned cnn_stride, unsigned cnn_activation);
 
 /**
  * @brief Model definition for the 1D Convolution block applied after the RNN
@@ -47,7 +48,6 @@ int phon_pred_lr_cnn(float* output_signal, float* input_signal,
  * @param[in]    gamma                  pointer to the scaling factors for the post-norm affine operation, size = in_channels
  * @param[in]    beta                   pointer to the offsets for the post-norm affine operation, size = in_channels
  * @param[in]    in_place               in-place computation of the batchnorm. Storage efficient
- * @param[in]    depth_cnn_hidden       hidden state/out_channels dimensions for the depth CNN
  * @param[in]    depth_cnn_padding      padding for the depth CNN layer. Note: applied to both sides of the input to the depth CNN
  * @param[in]    depth_cnn_kernel_size  kernel size of the depth CNN
  * @param[in]    depth_cnn_params       weights, bias and other essential parameters used to describe the depth CNN
@@ -78,11 +78,12 @@ int phon_pred_lr_cnn(float* output_signal, float* input_signal,
  */
 int phon_pred_depth_point_lr_cnn(float* output_signal, float* input_signal,
   unsigned in_time, unsigned in_channels,
-  float* mean, float* var, unsigned affine, float* gamma, float* beta, unsigned in_place,
-  unsigned depth_cnn_hidden, unsigned depth_cnn_padding, unsigned depth_cnn_kernel_size,
-  const void* depth_cnn_params, unsigned depth_cnn_stride, int depth_cnn_activation,
+  const float* const mean, const float* const var,
+  unsigned affine, const float* const gamma, const float* const beta, unsigned in_place,
+  unsigned depth_cnn_padding, unsigned depth_cnn_kernel_size,
+  const void* depth_cnn_params, unsigned depth_cnn_stride, unsigned depth_cnn_activation,
   unsigned point_cnn_hidden, unsigned point_cnn_padding, unsigned point_cnn_kernel_size,
-  const void* point_cnn_params, unsigned point_cnn_stride, int point_cnn_activation,
-  unsigned pool_padding, unsigned pool_kernel_size, unsigned pool_stride, int pool_activation);
+  const void* point_cnn_params, unsigned point_cnn_stride, unsigned point_cnn_activation,
+  unsigned pool_padding, unsigned pool_kernel_size, unsigned pool_stride, unsigned pool_activation);
 
 #endif

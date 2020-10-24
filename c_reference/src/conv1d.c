@@ -8,7 +8,7 @@
 
 int conv1d_lr(float* output_signal, unsigned out_time, unsigned out_channels, const float* input_signal,
   unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
-  const void* params, unsigned stride, int activation) {
+  const void* params, unsigned stride, unsigned activation) {
 
   const ConvLayers_LR_Params* tparams= (ConvLayers_LR_Params*) params;
   
@@ -51,7 +51,7 @@ int conv1d_lr(float* output_signal, unsigned out_time, unsigned out_channels, co
 
 int conv1d_depth_lr(float* output_signal, unsigned out_time, const float* input_signal,
   unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
-  const void* params, unsigned stride, int activation) {
+  const void* params, unsigned stride, unsigned activation) {
 
   const ConvLayers_LR_Params* tparams= (ConvLayers_LR_Params*) params;
 
@@ -90,11 +90,9 @@ int conv1d_depth_lr(float* output_signal, unsigned out_time, const float* input_
   return 0;
 }
 
-
-
 int conv1d(float* output_signal, unsigned out_time, unsigned out_channels, const float* input_signal,
   unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
-  const void* params, unsigned stride, int activation) {
+  const void* params, unsigned stride, unsigned activation) {
 
   const ConvLayers_Params* tparams= (ConvLayers_Params*) params;
 
@@ -133,7 +131,7 @@ int conv1d(float* output_signal, unsigned out_time, unsigned out_channels, const
 
 int conv1d_depth(float* output_signal, unsigned out_time, const float* input_signal,
   unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
-  const void* params, unsigned stride, int activation) {
+  const void* params, unsigned stride, unsigned activation) {
 
   const ConvLayers_Params* tparams= (ConvLayers_Params*) params;
 
@@ -170,7 +168,7 @@ int conv1d_depth(float* output_signal, unsigned out_time, const float* input_sig
 
 int avgpool1d(float* output_signal, unsigned out_time, const float* input_signal,
   unsigned in_time, unsigned in_channels,
-  unsigned padding, unsigned kernel_size, unsigned stride, int activation) {
+  unsigned padding, unsigned kernel_size, unsigned stride, unsigned activation) {
 
   // Iterate over the time steps and average them. Similar to Conv1D_Dept with a filter kernel of ones
   for (unsigned t_in = 0, t_out = 0; t_out < out_time; t_out++, t_in += stride) {
@@ -203,7 +201,8 @@ int avgpool1d(float* output_signal, unsigned out_time, const float* input_signal
 
 int batchnorm1d(float* output_signal, float* input_signal,
   unsigned in_time, unsigned in_channels,
-  float* mean, float* var, unsigned affine, float* gamma , float* beta,
+  const float* const mean, const float* const var,
+  unsigned affine, const float* const gamma , const float* const beta,
   unsigned in_place, float eps) {
   // Check if affine values was learnt
   if (affine) {
