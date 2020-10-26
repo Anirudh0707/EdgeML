@@ -4,6 +4,11 @@
 #ifndef __DSCNN_H__
 #define __DSCNN_H__
 
+// Function pointer for the Conv layer to be passed as a parameter. (conv1d or conv1d_lr only)
+typedef int (*conv_layer)(float*, unsigned, unsigned, const float*, 
+                          unsigned, unsigned, unsigned, unsigned, 
+                          const void*, unsigned, unsigned);
+
 /**
  * @brief Model definition for the 1D Convolution block applied before the RNN
  * @brief sub-layers : batchnorm1d -> conv1d_lr
@@ -11,11 +16,15 @@
  * @param[in]    input_signal        pointer to the input signal. size = in_time * in_channels
  * @param[in]    in_time             number of time steps in the input_signal
  * @param[in]    in_channels         number of input channels
- * @param[in]    mean                pointer to the mean for the batch normalization, size = in_channels
- * @param[in]    var                 pointer to the variance for the batch normalization, size = in_channels
- * @param[in]    affine              whether the affine operations are applied
- * @param[in]    gamma               pointer to the scaling factors for the post-norm affine operation, size = in_channels
- * @param[in]    beta                pointer to the offsets for the post-norm affine operation, size = in_channels
+ * @param[in]    mean                pointer to the mean for the batch normalization, size = in_channels. Pass NULL/0 for affine_config = 2
+ * @param[in]    var                 pointer to the variance for the batch normalization, size = in_channels. Pass NULL/0 for affine_config = 2
+ * @param[in]    affine_config       whether the affine operations are applied
+ *                                   if affine_config = 0, then only mean and var are used
+ *                                   if affine_config = 1, then mean, var, gamma and beta are used for the final computation.
+ *                                   if affine_config = 2, then only the gamma and beta are used. gamma = original_gamma/sqrt(var), beta = original_beta - gamma * mean/sqrt(var)
+ *                                   Note: Use affine_config = 2 for faster calculations. The new gamma and beta would need to be pre-computed, stored and passed
+ * @param[in]    gamma               pointer to the scaling factors for the post-norm affine operation, size = in_channels. Pass NULL/0 for affine_config = 0
+ * @param[in]    beta                pointer to the offsets for the post-norm affine operation, size = in_channels. Pass NULL/0 for affine_config = 0
  * @param[in]    in_place            in-place computation check for the batchnorm. Storage efficient
  * @param[in]    cnn_hidden          hidden state/out_channels dimensions for the low-rank CNN. The final channel size of this block
  * @param[in]    cnn_padding         padding for the low-rank CNN layer. Note: applied to both sides of the input 
@@ -31,7 +40,7 @@
 int phon_pred_lr_cnn(float* output_signal, float* input_signal,
   unsigned in_time, unsigned in_channels,
   const float* const mean, const float* const var,
-  unsigned affine, float* gamma, float* beta, unsigned in_place,
+  unsigned affine_config, float* gamma, float* beta, unsigned in_place,
   unsigned cnn_hidden, unsigned cnn_padding, unsigned cnn_kernel_size,
   const void* cnn_params, unsigned cnn_stride, unsigned cnn_activation);
 
@@ -42,11 +51,15 @@ int phon_pred_lr_cnn(float* output_signal, float* input_signal,
  * @param[in]    input_signal           pointer to the input signal. size = in_time * in_channels
  * @param[in]    in_time                number of time steps in the input
  * @param[in]    in_channels            number of input channels
- * @param[in]    mean                   pointer to the mean for the batch normalization, size = in_channels
- * @param[in]    var                    pointer to the variance for the batch normalization, size = in_channels
- * @param[in]    affine                 whether the affine operations are applied
- * @param[in]    gamma                  pointer to the scaling factors for the post-norm affine operation, size = in_channels
- * @param[in]    beta                   pointer to the offsets for the post-norm affine operation, size = in_channels
+ * @param[in]    mean                   pointer to the mean for the batch normalization, size = in_channels. Pass NULL/0 for affine_config = 2
+ * @param[in]    var                    pointer to the variance for the batch normalization, size = in_channels. Pass NULL/0 for affine_config = 2
+ * @param[in]    affine_config          whether the affine operations are applied
+ *                                      if affine_config = 0, then only mean and var are used
+ *                                      if affine_config = 1, then mean, var, gamma and beta are used for the final computation.
+ *                                      if affine_config = 2, then only the gamma and beta are used. gamma = original_gamma/sqrt(var), beta = original_beta - gamma * mean/sqrt(var)
+ *                                      Note: Use affine_config = 2 for faster calculations. The new gamma and beta would need to be pre-computed, stored and passed
+ * @param[in]    gamma                  pointer to the scaling factors for the post-norm affine operation, size = in_channels. Pass NULL/0 for affine_config = 0
+ * @param[in]    beta                   pointer to the offsets for the post-norm affine operation, size = in_channels. Pass NULL/0 for affine_config = 0
  * @param[in]    in_place               in-place computation of the batchnorm. Storage efficient
  * @param[in]    depth_cnn_padding      padding for the depth CNN layer. Note: applied to both sides of the input to the depth CNN
  * @param[in]    depth_cnn_kernel_size  kernel size of the depth CNN
@@ -77,9 +90,9 @@ int phon_pred_lr_cnn(float* output_signal, float* input_signal,
  *                                      3: relu
  */
 int phon_pred_depth_point_lr_cnn(float* output_signal, float* input_signal,
-  unsigned in_time, unsigned in_channels,
+  conv_layer point_cnn, unsigned in_time, unsigned in_channels,
   const float* const mean, const float* const var,
-  unsigned affine, const float* const gamma, const float* const beta, unsigned in_place,
+  unsigned affine_config, const float* const gamma, const float* const beta, unsigned in_place,
   unsigned depth_cnn_padding, unsigned depth_cnn_kernel_size,
   const void* depth_cnn_params, unsigned depth_cnn_stride, unsigned depth_cnn_activation,
   unsigned point_cnn_hidden, unsigned point_cnn_padding, unsigned point_cnn_kernel_size,

@@ -171,6 +171,7 @@ int avgpool1d(float* output_signal, unsigned out_time, const float* input_signal
   unsigned padding, unsigned kernel_size, unsigned stride, unsigned activation) {
 
   // Iterate over the time steps and average them. Similar to Conv1D_Dept with a filter kernel of ones
+  float scale = 1.0/(float)kernel_size;
   for (unsigned t_in = 0, t_out = 0; t_out < out_time; t_out++, t_in += stride) {
     for (unsigned ci = 0; ci < in_channels; ci++) {
       float sum = 0;
@@ -183,16 +184,16 @@ int avgpool1d(float* output_signal, unsigned out_time, const float* input_signal
         }
       }
       if (activation == 1) {
-        output_signal[t_out * in_channels + ci] = sigmoid(sum / (float)kernel_size);
+        output_signal[t_out * in_channels + ci] = sigmoid(sum * scale);
       }
       else if (activation == 2) {
-        output_signal[t_out * in_channels + ci] = tanh(sum / (float)kernel_size);
+        output_signal[t_out * in_channels + ci] = tanh(sum * scale);
       }
       else if (activation == 3) {
-        output_signal[t_out * in_channels + ci] = relu(sum / (float)kernel_size);
+        output_signal[t_out * in_channels + ci] = relu(sum * scale);
       }
       else {
-        output_signal[t_out * in_channels + ci] = sum / (float)kernel_size;
+        output_signal[t_out * in_channels + ci] = sum * scale;
       }
     }
   }
@@ -202,10 +203,10 @@ int avgpool1d(float* output_signal, unsigned out_time, const float* input_signal
 int batchnorm1d(float* output_signal, float* input_signal,
   unsigned in_time, unsigned in_channels,
   const float* const mean, const float* const var,
-  unsigned affine, const float* const gamma , const float* const beta,
+  unsigned affine_config, const float* const gamma , const float* const beta,
   unsigned in_place, float eps) {
   // Check if affine values was learnt
-  if (affine) {
+  if (affine_config == 1) {
     // Check for in-place computation
     if (in_place) {
       for (unsigned t = 0; t < in_time; t++) {
@@ -224,6 +225,27 @@ int batchnorm1d(float* output_signal, float* input_signal,
                                                * ((input_signal[t * in_channels + d]
                                                - mean[d]) / sqrt(var[d] + eps))
                                                + beta[d];
+        }
+      }
+    }
+  }
+  else if (affine_config == 2) {
+    // Check for in-place computation
+    if (in_place) {
+      for (unsigned t = 0; t < in_time; t++) {
+        for (unsigned d = 0; d < in_channels; d++) {
+          input_signal[t * in_channels + d] = (gamma[d]
+                                               * input_signal[t * in_channels + d])
+                                               + beta[d];
+        }
+      }
+    }
+    else {
+      for (unsigned t = 0; t < in_time; t++) {
+        for (unsigned d = 0; d < in_channels; d++) {
+          output_signal[t * in_channels + d] = (gamma[d]
+                                                * input_signal[t * in_channels + d])
+                                                + beta[d];
         }
       }
     }

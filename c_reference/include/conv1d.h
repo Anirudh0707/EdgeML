@@ -158,18 +158,22 @@ int avgpool1d(float* output_signal, unsigned out_time, const float* input_signal
  * @param[in]    input_signal     pointer to the input signal. size = in_time * in_channels
  * @param[in]    in_time          number of time steps in the input
  * @param[in]    in_channels      number of input channels. The output will have the same number of channels
- * @param[in]    mean             pointer to the mean for the batch normalization, size = in_channels
- * @param[in]    var              pointer to the variance for the batch normalization, size = in_channels
- * @param[in]    affine           whether the affine operations are applied
- * @param[in]    gamma            pointer to the scaling factors for the post-norm affine operation, size = in_channels. Provide Null/0 if affine is False(non-zero)
- * @param[in]    beta             pointer to the offsets for the post-norm affine operation, size = in_channels. Provide Null/0 if affine is False(non-zero)
+ * @param[in]    mean             pointer to the mean for the batch normalization, size = in_channels. if affine_config  = 2, then pass a NULL/0
+ * @param[in]    var              pointer to the variance for the batch normalization, size = in_channels. if affine_config  = 2, then pass a NULL/0
+ * @param[in]    affine_config    whether the affine operations are applied
+ *                                if affine_config = 0, then only mean and var are used
+ *                                if affine_config = 1, then mean, var, gamma and beta are used for the final computation.
+ *                                if affine_config = 2, then only the gamma and beta are used. gamma = original_gamma/sqrt(var), beta = original_beta - gamma * mean/sqrt(var)
+ *                                Note: Use affine_config = 2 for faster calculations. The new gamma and beta would need to be pre-computed, stored and passed
+ * @param[in]    gamma            pointer to the scaling factors for the post-norm affine operation, size = in_channels. Provide Null/0 if affine_config is 0
+ * @param[in]    beta             pointer to the offsets for the post-norm affine operation, size = in_channels. Provide Null/0 if affine_config is 0
  * @param[in]    in_place         in-place computation of the batchnorm i.e. the output is stored in-place of the input signal. Storage efficient
  * @param[in]    eps              a very small +ve value to avoid division by 0. For the default value, assign = 0.00001
  */
 int batchnorm1d(float* output_signal, float* input_signal,
   unsigned in_time, unsigned in_channels,
   const float* const mean, const float* const var, 
-  unsigned affine, const float* const gamma , const float* const beta,
+  unsigned affine_config, const float* const gamma , const float* const beta,
   unsigned in_place, float eps);
 
 #endif
