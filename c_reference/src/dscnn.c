@@ -11,7 +11,7 @@
 int phon_pred_lr_cnn(float* output_signal, float* input_signal,
   unsigned in_time, unsigned in_channels,
   const float* const mean, const float* const var,
-  unsigned affine, float* gamma, float* beta, unsigned in_place,
+  unsigned affine_config, float* gamma, float* beta, unsigned in_place,
   unsigned cnn_hidden, unsigned cnn_padding, unsigned cnn_kernel_size,
   const void* cnn_params, unsigned cnn_stride, unsigned cnn_activation) {
   
@@ -20,7 +20,7 @@ int phon_pred_lr_cnn(float* output_signal, float* input_signal,
     // BatchNorm
     batchnorm1d(0, input_signal,
       in_time, in_channels, 
-      mean, var, affine, gamma, beta,
+      mean, var, affine_config, gamma, beta,
       in_place, 0.00001);
     // CNN
     conv1d_lr(output_signal, out_time, cnn_hidden, input_signal, 
@@ -32,7 +32,7 @@ int phon_pred_lr_cnn(float* output_signal, float* input_signal,
     float* norm_out = (float*)malloc(in_time * in_channels * sizeof(float));
     batchnorm1d(norm_out, input_signal,
       in_time, in_channels, 
-      mean, var, affine, gamma, beta,
+      mean, var, affine_config, gamma, beta,
       in_place, 0.00001);
     // CNN
     conv1d_lr(output_signal, out_time, cnn_hidden, norm_out, 
@@ -44,9 +44,9 @@ int phon_pred_lr_cnn(float* output_signal, float* input_signal,
 }
 
 int phon_pred_depth_point_lr_cnn(float* output_signal, float* input_signal,
-  unsigned in_time, unsigned in_channels,
+  conv_layer point_cnn, unsigned in_time, unsigned in_channels,
   const float* const mean, const float* const var,
-  unsigned affine, const float* const gamma, const float* const beta, unsigned in_place,
+  unsigned affine_config, const float* const gamma, const float* const beta, unsigned in_place,
   unsigned depth_cnn_padding, unsigned depth_cnn_kernel_size,
   const void* depth_cnn_params, unsigned depth_cnn_stride, unsigned depth_cnn_activation,
   unsigned point_cnn_hidden, unsigned point_cnn_padding, unsigned point_cnn_kernel_size,
@@ -66,7 +66,7 @@ int phon_pred_depth_point_lr_cnn(float* output_signal, float* input_signal,
     batchnorm1d(0, act_out,
       in_time, in_channels, 
       mean, var,
-      affine, gamma, beta,
+      affine_config, gamma, beta,
       in_place, 0.00001);
     // Depth CNN
     depth_out = (float*)malloc(out_time * in_channels * sizeof(float));
@@ -81,7 +81,7 @@ int phon_pred_depth_point_lr_cnn(float* output_signal, float* input_signal,
     batchnorm1d(norm_out, act_out,
       in_time, in_channels, 
       mean, var,
-      affine, gamma, beta,
+      affine_config, gamma, beta,
       in_place, 0.00001);
     free(act_out);
     // Depth CNN
@@ -96,7 +96,7 @@ int phon_pred_depth_point_lr_cnn(float* output_signal, float* input_signal,
   in_time = out_time;
   out_time = in_time - point_cnn_kernel_size + 2 * point_cnn_padding + 1;
   float* point_out = (float*)malloc(out_time * point_cnn_hidden * sizeof(float));
-  conv1d_lr(point_out, out_time, point_cnn_hidden, depth_out, 
+  point_cnn(point_out, out_time, point_cnn_hidden, depth_out, 
     in_time, in_channels, point_cnn_padding, point_cnn_kernel_size, 
     point_cnn_params, point_cnn_stride, point_cnn_activation);
   free(depth_out);
