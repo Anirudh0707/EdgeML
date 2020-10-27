@@ -40,7 +40,7 @@ typedef int (*conv_layer)(float*, unsigned, unsigned, const float*,
 int phon_pred_lr_cnn(float* output_signal, float* input_signal,
   unsigned in_time, unsigned in_channels,
   const float* const mean, const float* const var,
-  unsigned affine_config, float* gamma, float* beta, unsigned in_place,
+  unsigned affine_config, const float* const gamma, const float* const beta, unsigned in_place,
   unsigned cnn_hidden, unsigned cnn_padding, unsigned cnn_kernel_size,
   const void* cnn_params, unsigned cnn_stride, unsigned cnn_activation);
 
