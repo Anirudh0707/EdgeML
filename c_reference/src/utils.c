@@ -71,7 +71,30 @@ void matVec(const float* const mat, const float* const vec,
   }
 }
 
-void matmul(const float* const matA, const float* const matB,
+void offset_matVec_conv1d(const float* mat, const float* vec,
+  unsigned nrows, unsigned ncols,
+  unsigned row_stride, unsigned vec_stride,
+  unsigned depthwise, float* ret) {
+
+  for (unsigned row = 0; row < nrows; row++) {
+    float sum = 0.0f;
+    float* mat_offset = (float*)mat;
+    float* vec_offset = (float*)vec;
+    unsigned cols = ncols;
+    while (cols--) {
+      sum += (*mat_offset++) * (*vec_offset);
+      vec_offset += vec_stride;
+    }
+    *ret++ = sum;
+    mat += row_stride;
+    // For depthwise, the vec(input) pointer is updated since each row of the mat corresponds to a separate index in the channels
+    if (depthwise) {
+      vec++;
+    }
+  }
+}
+
+void matMul(const float* const matA, const float* const matB,
   unsigned nrows, unsigned ncommon, unsigned ncols,
   float alpha, float beta,
   float* const ret) {

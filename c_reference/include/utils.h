@@ -31,6 +31,23 @@ void matVec(const float* const mat, const float* const vec,
   float alpha, float beta,
   float* const ret);
 
+/* Matrix-vector multiplication with a row offset
+   This function was developed primarily for the conv1d function. This helps bypass the permutation of the time and channel axis
+   ret is of size nrows, vec is of size ncols
+   mat is of size nrows * ncols, stored in row major
+   depthwise is to change the matVec to depthwise specific convolutions
+   row_stride is the offset factor between two adjacent rows
+   Note : This matrix-vector multiplication is useful for matrices where a certain number of columns are dropped
+   For a normal matVec case, this value will be ncols
+   Eg : for a 400 x 400 matrix and a 100 length vector, we can consider the top 400 x 100 elements for the multiplication. For this eg ncols will be 100 and row_stride will be 400
+   vec_stride is the offset fector between 2 elements in a vector i.e. the elements of a vector are placed at "n" intervals
+   For a normal matVec case, this value will be 1
+   Eg : For matVec with a 400 x 100 matrix a vector of length 100 is needed. So it's possible to enter a 400 length vector and consider every 4th element. For this ncols will be 100 and vec_stride will be 4*/
+void offset_matVec_conv1d(const float* mat, const float* vec,
+  unsigned nrows, unsigned ncols,
+  unsigned row_stride, unsigned vec_stride,
+  unsigned depthwise, float* ret);
+
 /* Scaled matrix-matrix multiplication: ret = alpha * ret + beta * matA * matB
    matA      first matrix; size = nrows * ncommon
    matB      second matrix; size = ncommon * ncols
@@ -41,7 +58,7 @@ void matVec(const float* const mat, const float* const vec,
    beta      scaling factor for the result of the multiplication (matA * matB)
    ret       matrix multiplication output
  */
-void matmul(const float* const matA, const float* const matB,
+void matMul(const float* const matA, const float* const matB,
   unsigned nrows, unsigned ncommon, unsigned ncols,
   float alpha, float beta,
   float* const ret);
