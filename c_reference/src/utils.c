@@ -109,6 +109,46 @@ void matMul(const float* const matA, const float* const matB,
   }
 }
 
+void transposed_tiledMatMul(const float* const matA, const float* const matB,
+  unsigned nrows, unsigned ncommon, unsigned ncols,
+  unsigned total_comm_A, unsigned total_comm_B,
+  float* const ret, unsigned block_size) {
+  for (unsigned row = 0; row < nrows; row += block_size) {
+    unsigned row_block_size = (row + block_size < nrows) ? block_size : nrows - row;
+    for (unsigned col = 0; col < ncols; col += block_size) {
+      unsigned col_block_size = (col + block_size < ncols) ? block_size : ncols - col;
+      for (unsigned comm = 0; comm < ncommon; comm += block_size) {
+        unsigned comm_block_size = (comm + block_size < ncommon) ? block_size : ncommon - comm;
+        for (unsigned block_row = row; block_row < row + row_block_size; block_row++) {
+          float *ret_offset = (float *)ret + block_row * ncols + col;
+          for (unsigned block_col = col; block_col < col + col_block_size; block_col++) {
+            float sum = 0;
+            unsigned temp_block_size = comm_block_size;
+            const float *matA_offset = (const float*)matA + block_row * total_comm_A + comm;
+            const float *matB_offset = (const float*)matB + block_col * total_comm_B + comm;
+
+            #ifdef LOOP_UNROLL
+              unsigned len_unroll = comm_block_size >> 2;
+              temp_block_size = comm_block_size % 4;
+              while (len_unroll--) {
+                sum += (*matA_offset++) * (*matB_offset++);
+                sum += (*matA_offset++) * (*matB_offset++);
+                sum += (*matA_offset++) * (*matB_offset++);
+                sum += (*matA_offset++) * (*matB_offset++);
+              }
+            #endif
+
+            while (temp_block_size--) {
+              sum += (*matA_offset++) * (*matB_offset++);
+            }
+            *ret_offset++ += sum;
+          }
+        } 
+      }
+    }
+  }
+}
+
 void v_add(float scalar1, const float* const vec1,
   float scalar2, const float* const vec2,
   unsigned len, float* const ret) {

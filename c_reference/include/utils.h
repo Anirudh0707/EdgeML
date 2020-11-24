@@ -39,10 +39,13 @@ void matVec(const float* const mat, const float* const vec,
    row_stride is the offset factor between two adjacent rows
    Note : This matrix-vector multiplication is useful for matrices where a certain number of columns are dropped
    For a normal matVec case, this value will be ncols
-   Eg : for a 400 x 400 matrix and a 100 length vector, we can consider the top 400 x 100 elements for the multiplication. For this eg ncols will be 100 and row_stride will be 400
+   Eg : For a 400 x 400 matrix and a 100 length vector, we can consider the top 400 x 100 elements for the multiplication. 
+        For this eg ncols will be 100 and row_stride will be 400
    vec_stride is the offset fector between 2 elements in a vector i.e. the elements of a vector are placed at "n" intervals
    For a normal matVec case, this value will be 1
-   Eg : For matVec with a 400 x 100 matrix a vector of length 100 is needed. So it's possible to enter a 400 length vector and consider every 4th element. For this ncols will be 100 and vec_stride will be 4*/
+   Eg : For matVec with a 400 x 100 matrix a vector of length 100 is needed. 
+        So it's possible to enter a 400 length vector and consider every 4th element. 
+        For this ncols will be 100 and vec_stride will be 4 */
 void offset_matVec_conv1d(const float* mat, const float* vec,
   unsigned nrows, unsigned ncols,
   unsigned row_stride, unsigned vec_stride,
@@ -62,6 +65,24 @@ void matMul(const float* const matA, const float* const matB,
   unsigned nrows, unsigned ncommon, unsigned ncols,
   float alpha, float beta,
   float* const ret);
+
+/* Tiled implementation of the Matrix Multiplication, but with matB stored in the transposed format
+   The result will the same as matMul but the matrix B will be first transposed and then stored
+   matA           first matrix; shape = [nrows, ncommon]
+   matB           second matrix; size = [ncols, ncommon]
+   nrows          number of rows in the first matrix
+   ncommon        number of columns in the first matrix/number of rows in the second matrix
+   ncols          number of columns in the second matrix
+   total_comm_A   The actual offset factor between 2 rows for matA. Used if we need fewer columns than the actual number stored
+   total_comm_B   The actual offset factor between 2 rows for matB. Used if we need fewer columns than the actual number stored. 
+                  Since matB is transposed the columns are now the ncomm axis
+   ret            matrix multiplication output
+   block_size     tile/block size optimal cache performance. A hardware specific parameter
+*/
+void transposed_tiledMatMul(const float* const matA, const float* const matB,
+  unsigned nrows, unsigned ncommon, unsigned ncols,
+  unsigned total_comm_A, unsigned total_comm_B,
+  float* const ret, unsigned block_size);
 
 // scaled vector addition: ret = scalar1 * vec1 + scalar2 * vector2
 void v_add(float scalar1, const float* const vec1,
