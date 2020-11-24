@@ -43,11 +43,11 @@ test_quantized_face_detection_sparse: $(FACE_DETECTION_DIR)/test_quantized_face_
 	$(CC) -o $@ $^ $(IFLAGS) $(CFLAGS) -Wno-unused-result -lm
 
 RNNBRICKED_DIR=rnn_bricked
-test_rnn_bricked: $(RNNBRICKED_DIR)/test_rnn_bricked.c $(SRC_DIR)/utils.o $(SRC_DIR)/fastgrnn.o $(SRC_DIR)/rnn_bricked.o
+test_rnn_bricked: $(RNNBRICKED_DIR)/test_rnn_bricked.c $(SRC_DIR)/utils.o $(SRC_DIR)/rnn_bricked.o
 	$(CC) -o $@ $^ $(IFLAGS) $(CFLAGS) -lm
 
 KWS_DIR=kws
-test_phoneme_det_cnn_rnn: $(KWS_DIR)/test_phoneme_det_cnn_rnn.c $(SRC_DIR)/utils.o $(SRC_DIR)/conv1d.o $(SRC_DIR)/dscnn.o $(SRC_DIR)/fastgrnn.o $(SRC_DIR)/rnn_bricked.o
+test_phoneme_det_cnn_rnn: $(KWS_DIR)/test_phoneme_det_cnn_rnn.c $(SRC_DIR)/utils.o $(SRC_DIR)/conv1d.o $(SRC_DIR)/dscnn.o $(SRC_DIR)/rnn_bricked.o
 	$(CC) -o $@ $^ $(IFLAGS) $(CFLAGS) -lm
 
 .PHONY: clean cleanest

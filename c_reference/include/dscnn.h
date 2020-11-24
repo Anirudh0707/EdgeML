@@ -14,6 +14,7 @@ typedef int (*conv_layer)(float*, unsigned, unsigned, const float*,
  * @brief sub-layers : batchnorm1d -> conv1d_lr
  * @param[out]   output_signal       pointer to the final output signal, minimum size = out_time * in_channels. out_time has to be calculated based on the reduction from all the conv and pool layers
  * @param[in]    input_signal        pointer to the input signal. size = in_time * in_channels
+ * @param[in]    cnn                 function pointer for the CNN layer. (any of the conv layers can be passed with appropriate params)
  * @param[in]    in_time             number of time steps in the input_signal
  * @param[in]    in_channels         number of input channels
  * @param[in]    mean                pointer to the mean for the batch normalization, size = in_channels. Pass NULL/0 for affine_config = 2
@@ -38,7 +39,7 @@ typedef int (*conv_layer)(float*, unsigned, unsigned, const float*,
  *                                   3: relu
  */
 int phon_pred_lr_cnn(float* output_signal, float* input_signal,
-  unsigned in_time, unsigned in_channels,
+  conv_layer cnn, unsigned in_time, unsigned in_channels,
   const float* const mean, const float* const var,
   unsigned affine_config, const float* const gamma, const float* const beta, unsigned in_place,
   unsigned cnn_hidden, unsigned cnn_padding, unsigned cnn_kernel_size,
@@ -49,6 +50,7 @@ int phon_pred_lr_cnn(float* output_signal, float* input_signal,
  * @brief sub-layers : custom nonlinearity(semi_sigmoid_tanh) -> batchnorm1d -> conv1d_depth -> conv1d_lr -> avgpool1d
  * @param[out]   output_signal          pointer to the final output signal, minimum size = out_time * in_channels. out_time has to be calculated based on the reduction from all the conv and pool layers
  * @param[in]    input_signal           pointer to the input signal. size = in_time * in_channels
+ * @param[in]    point_cnn              function pointer for the point-wise CNN. (any of the conv layers can be passed with appropriate params)
  * @param[in]    in_time                number of time steps in the input
  * @param[in]    in_channels            number of input channels
  * @param[in]    mean                   pointer to the mean for the batch normalization, size = in_channels. Pass NULL/0 for affine_config = 2

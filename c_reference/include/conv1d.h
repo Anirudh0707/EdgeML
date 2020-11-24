@@ -4,18 +4,35 @@
 #ifndef __CONV1D_H__
 #define __CONV1D_H__
 
-// Currently dilation is not supported. We have coded separate functions for regular and depthwise conv1d(and low-rank versions). They currently do not support the use of groups
-// We use a custom matVec with offset (in utils) for our conv codes. This allows us to decompose the operation using the low-rank property and decrease the run-time
-// The unoptimized version would be to first compute the weights and then perform the convolution
+/*  All the matrices/tensors are stored in the row major format
+
+   NOTES for the conv layers
+-> For the non-depthwise cases, store the matrices as described below. Permutation might be necessary
+-> The low-rank conv layers don't support depthwise computation. This is due to the out_channels/in_channels = 0 constarint. 
+   For full-rank this is satisfied since out_channels = in_channels
+   When the weight matrix is decomposed, the constarint is violated (since rank < out_channels ; and out_channels = in_channels for depthwise)
+-> For the parallel cases, the non-overlapping cases of the convolution are computed parallelly using MatMul (since the blocked MatMul is faster)
+   This howver is only valid for when the filter is fully in the input. There would be no-overlapping filters for the edge cases
+   Hence the MatVec code(regular code) is used to calculate these cases
+
+   Constraint
+-> Due to the above reason, the parallel layers have to be used only for large in_time inputs
+   This should typically be for in_time (without the padding) greater than 3 times the kernel_size
+   For such short input cases, the code will either yield index-mismatched output or display a segmentration fault
+-> This constraint is due to a lack of time steps to parallelize into a matrix
+   For such cases, the MatVec would need to be used
+*/
 
 /**
  * @brief Model parameters for the 1D Convolution Layer
- * @var   W    pointer to the flattened conv weights, original shape for regular = [out_channels, kernel_size, in_channels], shape for depthwise = [in_channels, kernel_size, 1]
- * @var   B    pointer to the bias vector, original shape = [out_channels]
+ * @var   W           pointer to the flattened conv weights, original shape for regular = [out_channels, kernel_size, in_channels], shape for depthwise = [in_channels, kernel_size, 1]
+ * @var   B           pointer to the bias vector, original shape = [out_channels]
+ * @var   depthwise   flag for deciding between regular(=0) and depthwise(=1) conv
  */
 typedef struct ConvLayers_Params {
   const float* const W;
   const float* const B;
+  unsigned depthwise;
 } ConvLayers_Params;
 
 /**
@@ -23,16 +40,17 @@ typedef struct ConvLayers_Params {
  * @param[out]   output_signal    pointer to the output signal, size = out_time * out_channels
  * @param[in]    out_time         number of time steps in the output
  * @param[in]    out_channels     number of output channels for the output of the conv layer
+ *                                NOTE: out_channels = in_channels for depthwise. This is set manually in the function
  * @param[in]    input_signal     pointer to the input signal. size = in_time * in_channels
  * @param[in]    in_time          number of time steps in the input
  * @param[in]    in_channels      number of input channels
  * @param[in]    padding          padding applied to the input before the conv is performed.
  *                                Note: padding is applied to both the starting and ending of the input, along the time axis
- *                                E.g : padding = 3, the input is padded with zeros(for 3 time steps), both before the input_signal(time step 0) and after the input_signal(time step in_time).
+ *                                E.g : padding = 3, the input is padded with zeros(for 3 time steps), both before the input_signal(time step 0) and after the input_signal(time step in_time-1)
  * @param[in]    kernel_size      kernel size of the conv filter
  * @param[in]    params           weights, bias and other essential parameters used to describe the layer
  * @param[in]    stride           stride length for the layer. input_time_iterator += stride for output_time_iterator +=1
- * @param[in]    activation       an integer to choose the type of activation function.
+ * @param[in]    activation       an integer to choose the type of activation function. More can be added as per the necessity
  *                                0: none
  *                                1: sigmoid
  *                                2: tanh
@@ -43,26 +61,38 @@ int conv1d(float* output_signal, unsigned out_time, unsigned out_channels, const
   const void* params, unsigned stride, unsigned activation);
 
 /**
- * @brief Model definition for the 1D Depthwise Convolution Layer. Currently only for dilation = 1
- * @param[out]   output_signal    pointer to the output signal, size = out_time * in_channels
- *                                NOTE: out_channels == in_channels for depthwise
+ * @brief Model parameters for the 1D Parallel Convolution Layer
+ * @var   W           pointer to the flattened conv weights, original shape for regular = [out_channels, kernel_size, in_channels], shape for depthwise = [in_channels, kernel_size, 1]
+ * @var   B           pointer to the bias vector, original shape = [out_channels]
+ * @var   block_size  block/tile size for the cache. Used for tiled MatMul
+ */
+typedef struct ConvLayers_Parallel_Params {
+  const float* const W;
+  const float* const B;
+  unsigned block_size;
+} ConvLayers_Parallel_Params;
+
+/**
+ * @brief Model definition for the 1D Parallel Convolution Layer. Currently only for dilation = 1. No depthwise.
+ * @param[out]   output_signal    pointer to the output signal, size = out_time * out_channels
  * @param[in]    out_time         number of time steps in the output
+ * @param[in]    out_channels     number of output channels for the output of the conv layer
  * @param[in]    input_signal     pointer to the input signal. size = in_time * in_channels
  * @param[in]    in_time          number of time steps in the input
- * @param[in]    in_channels      number of input channels. The output will have the same number of channels
+ * @param[in]    in_channels      number of input channels
  * @param[in]    padding          padding applied to the input before the conv is performed.
  *                                Note: padding is applied to both the starting and ending of the input, along the time axis
- *                                E.g : padding = 3, the input is padded with zeros(for 3 time steps), both before the input_signal(time step 0) and after the input_signal(time step in_time).
+ *                                E.g : padding = 3, the input is padded with zeros(for 3 time steps), both before the input_signal(time step 0) and after the input_signal(time step in_time-1)
  * @param[in]    kernel_size      kernel size of the conv filter
  * @param[in]    params           weights, bias and other essential parameters used to describe the layer
  * @param[in]    stride           stride length for the layer. input_time_iterator += stride for output_time_iterator +=1
- * @param[in]    activation       an integer to choose the type of activation function.
+ * @param[in]    activation       an integer to choose the type of activation function. More can be added as per the necessity
  *                                0: none
  *                                1: sigmoid
  *                                2: tanh
  *                                3: relu
  */
-int conv1d_depth(float* output_signal, unsigned out_time, const float* input_signal,
+int conv1d_parallel(float* output_signal, unsigned out_time, unsigned out_channels, const float* input_signal,
   unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
   const void* params, unsigned stride, unsigned activation);
 
@@ -81,20 +111,21 @@ typedef struct ConvLayers_LR_Params {
 } ConvLayers_LR_Params;
 
 /**
- * @brief Model definition for the 1D Low-Rank Convolution Layer. Currently only for dilation = 1
+ * @brief Model definition for the 1D Low-Rank Convolution Layer. Currently only for dilation = 1. 
+ * @brief Low-Rank and depthwise are incompatible as the low-rank decomposition of the weight matrix violates the depthwise conditions (out_channels % groups = 0, where groups = in_channels)
  * @param[out]   output_signal    pointer to the output signal, size = out_time * out_channels
  * @param[in]    out_time         number of time steps in the output
- * @param[in]    out_channels     number of output channels for the ouput of the conv layer
+ * @param[in]    out_channels     number of output channels for the output of the conv layer
  * @param[in]    input_signal     pointer to the input signal. size = in_time * in_channels
  * @param[in]    in_time          number of time steps in the input
  * @param[in]    in_channels      number of input channels
  * @param[in]    padding          padding applied to the input before the conv is performed.
  *                                Note: padding is applied to both the starting and ending of the input, along the time axis
- *                                E.g : padding = 3, the input is padded with zeros(for 3 time steps), both before the input_signal(time step 0) and after the input_signal(time step in_time).
+ *                                E.g : padding = 3, the input is padded with zeros(for 3 time steps), both before the input_signal(time step 0) and after the input_signal(time step in_time-1)
  * @param[in]    kernel_size      kernel size of the conv filter
  * @param[in]    params           weights, bias and other essential parameters used to describe the layer
  * @param[in]    stride           stride length for the layer. input_time_iterator += stride for output_time_iterator +=1
- * @param[in]    activation       an integer to choose the type of activation function.
+ * @param[in]    activation       an integer to choose the type of activation function. More can be added as per the necessity
  *                                0: none
  *                                1: sigmoid
  *                                2: tanh
@@ -105,36 +136,45 @@ int conv1d_lr(float* output_signal, unsigned out_time, unsigned out_channels, co
   const void* params, unsigned stride, unsigned activation);
 
 /**
- * @brief Model definition for the 1D Low-Rank Depthwise Convolution Layer. Currently only for dilation = 1
- * @param[out]   output_signal    pointer to the output signal, size = out_time * in_channels
- *                                NOTE: out_channels == in_channels for depthwise conv
+ * @brief Model parameters for the 1D Low Rank Parallel Convolution Layer.
+ * @var    W1                  pointer to the flattened 1st low-rank component of the weights, original shape = [out_channels, rank]. For depthwise out_channels = in_channels
+ * @var    W2                  pointer to the flattened 2nd low-rank component of the weights, original shape for regular = [rank, kernel_size, in_channels], shape for depthwise = [rank, kernel_size, 1]
+ * @var    B                   pointer to the flattened bias vector for the convolution, original shape = [out_channels]
+ * @var    rank                rank of the weight tensor. A low-rank decomposition typically used to reduce computation and storage
+ * @var    block_size_to_lr    block/tile size for the cache. Used for tiled MatMul. Used for the input -> low-rank computation
+ * @var    block_size_from_lr  block/tile size for the cache. Used for tiled MatMul. Used for the low-rank -> output computation
+ */
+typedef struct ConvLayers_LR_Parallel_Params {
+  const float* const W1;
+  const float* const W2;
+  const float* const B;
+  unsigned rank;
+  unsigned block_size_to_lr;
+  unsigned block_size_from_lr;
+} ConvLayers_LR_Parallel_Params;
+
+/**
+ * @brief Model definition for the 1D Low-Rank Parallel Convolution Layer. Currently only for dilation = 1. 
+ * @brief Low-Rank and depthwise are incompatible as the low-rank decomposition of the weight matrix violates the depthwise conditions (out_channels % groups = 0, where groups = in_channels)
+ * @param[out]   output_signal    pointer to the output signal, size = out_time * out_channels
  * @param[in]    out_time         number of time steps in the output
+ * @param[in]    out_channels     number of output channels for the output of the conv layer
  * @param[in]    input_signal     pointer to the input signal. size = in_time * in_channels
  * @param[in]    in_time          number of time steps in the input
- * @param[in]    in_channels      number of input channels. The output will have the same number of channels
+ * @param[in]    in_channels      number of input channels
  * @param[in]    padding          padding applied to the input before the conv is performed.
  *                                Note: padding is applied to both the starting and ending of the input, along the time axis
- *                                E.g : padding = 3, the input is padded with zeros(for 3 time steps), both before the input_signal(time step 0) and after the input_signal(time step in_time).
+ *                                E.g : padding = 3, the input is padded with zeros(for 3 time steps), both before the input_signal(time step 0) and after the input_signal(time step in_time-1)
  * @param[in]    kernel_size      kernel size of the conv filter
  * @param[in]    params           weights, bias and other essential parameters used to describe the layer
  * @param[in]    stride           stride length for the layer. input_time_iterator += stride for output_time_iterator +=1
- * @param[in]    activation       an integer to choose the type of activation function.
+ * @param[in]    activation       an integer to choose the type of activation function. More can be added as per the necessity
  *                                0: none
  *                                1: sigmoid
  *                                2: tanh
  *                                3: relu
- Note for the usage of conv1d_depth_lr:
- The depthwise with low-rank conv1d code currently uses an unoptimized implementation based on the computation of the conv weights, followed by the depthwise convolution
- The reason for using the unoptimized implementation for the depthwise with low-rank conv1d is due to the violation of the depthwise constraints when the low-rank decomposition is applied
- The use of depthwise convolution imposes a constraint on the out_channels of the weight matrix. When the low-rank decomposition is applied on top of this matrix, these constraints will be violated
- The decomposition converts the depthwise conv into a fully-connected layer and a convolution layer with weight [rank, kernel_size, 1]
- The new smaller weight matrix resembles a depthwise conv. But here, typically, in_channels > rank. This causes a violation in the matrix constraints for depthwise convolution
- Hence, due to the violation, we cannot split the opeartion and would need to use the unoptimized solution with full-rank weight computation followed by convolution
-
- The depthwise with low-rank code is recommended for extreme storage constraints with no major constraints on the computation cost
- For all other puposes, we recommend the use of a combinantion of depthwise conv, low-rank conv and regular conv
  */
-int conv1d_depth_lr(float* output_signal, unsigned out_time, const float* input_signal,
+int conv1d_lr_parallel(float* output_signal, unsigned out_time, unsigned out_channels, const float* input_signal,
   unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
   const void* params, unsigned stride, unsigned activation);
 
@@ -149,10 +189,10 @@ int conv1d_depth_lr(float* output_signal, unsigned out_time, const float* input_
  * @param[in]    in_channels      number of input channels. The output will have the same number of channels
  * @param[in]    padding          padding applied to the input before the conv is performed.
  *                                Note: padding is applied to both the starting and ending of the input, along the time axis
- *                                E.g : padding = 3, the input is padded with zeros(for 3 time steps), both before the input_signal(time step 0) and after the input_signal(time step in_time).
+ *                                E.g : padding = 3, the input is padded with zeros(for 3 time steps), both before the input_signal(time step 0) and after the input_signal(time step in_time-1)
  * @param[in]    kernel_size      kernel size of the pool filter
  * @param[in]    stride           stride length for the layer. input_time_iterator += stride for output_time_iterator +=1
- * @param[in]    activation       an integer to choose the type of activation function.
+ * @param[in]    activation       an integer to choose the type of activation function. More can be added as per the necessity
  *                                0: none
  *                                1: sigmoid
  *                                2: tanh

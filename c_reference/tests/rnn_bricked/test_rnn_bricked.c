@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "rnn_bricked.h"
-#include "fastgrnn.h"
 #include "utils.h"
 
 #include "rnn_params.h"
@@ -12,9 +11,7 @@
 
 int main() {
 
-  FastGRNN_LR_Params bwd_RNN_params = {
-    .mean   = 0,
-    .stdDev = 0,
+  BrickedFastGRNN_LR_Params bwd_RNN_params = {
     .W1     = B_W1,
     .W2     = B_W2,
     .wRank  = RNN_LOW_RANK,
@@ -24,12 +21,14 @@ int main() {
     .Bg     = B_BIAS_GATE,
     .Bh     = B_BIAS_UPDATE,
     .sigmoid_zeta = sigmoid(B_ZETA),
-    .sigmoid_nu   = sigmoid(B_NU)
+    .sigmoid_nu   = sigmoid(B_NU),
+    .block_size_u_from_lr = 100,
+    .block_size_u_to_lr = 100,
+    .block_size_w_from_lr = 100,
+    .block_size_w_to_lr = 100,
   };
 
-  FastGRNN_LR_Params fwd_RNN_params = {
-    .mean   = 0,
-    .stdDev = 0,
+  BrickedFastGRNN_LR_Params fwd_RNN_params = {
     .W1     = F_W1,
     .W2     = F_W2,
     .wRank  = RNN_LOW_RANK,
@@ -39,31 +38,22 @@ int main() {
     .Bg     = F_BIAS_GATE,
     .Bh     = F_BIAS_UPDATE,
     .sigmoid_zeta = sigmoid(F_ZETA),
-    .sigmoid_nu   = sigmoid(F_NU)
+    .sigmoid_nu   = sigmoid(F_NU),
+    .block_size_u_from_lr = 100,
+    .block_size_u_to_lr = 100,
+    .block_size_w_from_lr = 100,
+    .block_size_w_to_lr = 100,
   };
 
-  float preComp[RNN_IN_FEATURES] = { 0.0 };
-  float tempLRW[RNN_LOW_RANK] = { 0.0 };
-  float tempLRU[RNN_LOW_RANK] = { 0.0 };
-  float normFeatures[RNN_IN_FEATURES] = { 0.0 };
-  FastGRNN_LR_Buffers buffers = {
-    .preComp = preComp,
-    .tempLRW = tempLRW,
-    .tempLRU = tempLRU,
-    .normFeatures = normFeatures
-  };
+  float* pred = (float*)malloc(RNN_OUT_TIME * RNN_OUT_FEATURES * sizeof(float));
 
-  float pred[RNN_OUT_TIME * RNN_OUT_FEATURES] = {};
-
-  forward_bricked_rnn(pred, RNN_OUT_FEATURES >> 1, INPUT,
+  forward_bricked_fastgrnn_lr(pred, RNN_OUT_FEATURES >> 1, INPUT,
     RNN_IN_TIME, RNN_IN_FEATURES, FWD_WINDOW, HOP,
-    fastgrnn_lr, &fwd_RNN_params, &buffers,
-    1, 1, 0);
+    &fwd_RNN_params, 1, 1);
 
-  backward_bricked_rnn(pred + (RNN_OUT_FEATURES >> 1), RNN_OUT_FEATURES >> 1, INPUT,
+  backward_bricked_fastgrnn_lr(pred + (RNN_OUT_FEATURES >> 1), RNN_OUT_FEATURES >> 1, INPUT,
     RNN_IN_TIME, RNN_IN_FEATURES, BWD_WINDOW, HOP,
-    fastgrnn_lr, &bwd_RNN_params, &buffers,
-    1, 1, 0);
+    &bwd_RNN_params, 1, 1);
   
   float error = 0;
   float denom = 0;
@@ -76,7 +66,12 @@ int main() {
   }
   float avg_error = error / (RNN_OUT_TIME * RNN_OUT_FEATURES);
   float rmse = error / denom;
+  
+  #ifdef LOOP_UNROLL
+    printf("Loop Unrolling Active\n");
+  #endif
   printf("Testing Bricked RNNs Bi-Directional\n");
   printf("Agg Squared Error: %f ; MSE: %f ; RMSE: %f\n", error, avg_error, rmse);
+  free(pred);
   return 0;
 }
