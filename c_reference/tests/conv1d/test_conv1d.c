@@ -41,6 +41,22 @@ void conv1d_check() {
   free(pred);
 }
 
+void conv1d_parallel_check() {
+  ConvLayers_Params conv_params = {
+    .W = CONV1D_CONV_WEIGHT,
+    .B = CONV1D_CONV_BIAS,
+  };
+  
+  float* pred = (float*)malloc(CONV1D_OUT_TIME * CONV1D_OUT_FEATURES * sizeof(float));
+  conv1d_parallel(pred, CONV1D_OUT_TIME, CONV1D_OUT_FEATURES, CONV1D_INPUT,
+    CONV1D_IN_TIME, CONV1D_IN_FEATURES, CONV1D_PAD, CONV1D_FILT,
+    &conv_params, CONV1D_STRIDE, CONV1D_ACT);
+
+  printf("Testing Parallel Convolution\n");
+  errorCheck(pred, CONV1D_OUTPUT, CONV1D_OUT_TIME, CONV1D_OUT_FEATURES);
+  free(pred);
+}
+
 void conv1d_depth_check() {
   ConvLayers_Params conv_params = {
     .W = CONV1D_DEPTH_CONV_WEIGHT,
@@ -101,6 +117,7 @@ void conv1d_lr_depth_check() {
 
 int main() {
   conv1d_check();
+  conv1d_parallel_check();
   conv1d_lr_check();
   conv1d_depth_check();
   conv1d_lr_depth_check();

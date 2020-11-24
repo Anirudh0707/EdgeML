@@ -42,6 +42,10 @@ int conv1d(float* output_signal, unsigned out_time, unsigned out_channels, const
   unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
   const void* params, unsigned stride, unsigned activation);
 
+int conv1d_parallel(float* output_signal, unsigned out_time, unsigned out_channels, const float* input_signal,
+  unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
+  const void* params, unsigned stride, unsigned activation);
+
 /**
  * @brief Model definition for the 1D Depthwise Convolution Layer. Currently only for dilation = 1
  * @param[out]   output_signal    pointer to the output signal, size = out_time * in_channels
