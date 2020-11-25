@@ -9,7 +9,6 @@
 #include "./conv1d_regular/conv_param.h"
 #include "./conv1d_depthwise/conv_param_depth.h"
 #include "./conv1d_lr/conv_param_lr.h"
-#include "./conv1d_lr_depthwise/conv_param_lr_depth.h"
 
 // Error Check
 void errorCheck(float* pred, float* label, unsigned out_time, int out_features) {
@@ -97,32 +96,10 @@ void conv1d_lr_check() {
   free(pred);
 }
 
-void conv1d_lr_depth_check() {
-  ConvLayers_LR_Params conv_params = {
-    .W1 = CONV1D_LR_DEPTHWISE_CONV_W1,
-    .W2 = CONV1D_LR_DEPTHWISE_CONV_W2,
-    .B = CONV1D_LR_DEPTHWISE_CONV_BIAS,
-    .rank = CONV1D_LR_DEPTHWISE_LOW_RANK
-  };
-  
-  float* pred = (float*)malloc(CONV1D_LR_DEPTHWISE_OUT_TIME 
-                                * CONV1D_LR_DEPTHWISE_OUT_FEATURES * sizeof(float));
-  conv1d_depth_lr(pred, CONV1D_LR_DEPTHWISE_OUT_TIME, CONV1D_LR_DEPTHWISE_INPUT,
-    CONV1D_LR_DEPTHWISE_IN_TIME, CONV1D_LR_DEPTHWISE_IN_FEATURES, 
-    CONV1D_LR_DEPTHWISE_PAD, CONV1D_LR_DEPTHWISE_FILT,
-    &conv_params, CONV1D_LR_DEPTHWISE_STRIDE, CONV1D_LR_DEPTHWISE_ACT);
-
-  printf("Testing Low-Rank Depthwise Convolution\n");
-  errorCheck(pred, CONV1D_LR_DEPTHWISE_OUTPUT, 
-              CONV1D_LR_DEPTHWISE_OUT_TIME, CONV1D_LR_DEPTHWISE_OUT_FEATURES);
-  free(pred);
-}
-
 int main() {
   conv1d_check();
   conv1d_parallel_check();
   conv1d_lr_check();
   conv1d_depth_check();
-  conv1d_lr_depth_check();
   return 0;
 }
