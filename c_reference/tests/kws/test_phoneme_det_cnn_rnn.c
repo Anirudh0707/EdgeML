@@ -70,6 +70,7 @@ void phoneme_prediction(float* mem_buf) {
   ConvLayers_Params depth_param_2 = {
     .W = CNN2_DEPTH_W,
     .B = CNN2_DEPTH_BIAS,
+    .depthwise = 1,
   };
 
   ConvLayers_LR_Params point_param_2 = {
@@ -82,6 +83,7 @@ void phoneme_prediction(float* mem_buf) {
   ConvLayers_Params depth_param_3 = {
     .W = CNN3_DEPTH_W,
     .B = CNN3_DEPTH_BIAS,
+    .depthwise = 1,
   };
 
   ConvLayers_LR_Params point_param_3 = {
@@ -94,6 +96,7 @@ void phoneme_prediction(float* mem_buf) {
   ConvLayers_Params depth_param_4 = {
     .W = CNN4_DEPTH_W,
     .B = CNN4_DEPTH_BIAS,
+    .depthwise = 1,
   };
 
   ConvLayers_LR_Params point_param_4 = {
@@ -106,6 +109,7 @@ void phoneme_prediction(float* mem_buf) {
   ConvLayers_Params depth_param_5 = {
     .W = CNN5_DEPTH_W,
     .B = CNN5_DEPTH_BIAS,
+    .depthwise = 1,
   };
 
   ConvLayers_LR_Params point_param_5 = {

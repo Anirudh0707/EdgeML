@@ -176,6 +176,12 @@ int conv1d(float* output_signal, unsigned out_time, unsigned out_channels, const
   const void* params, unsigned stride, unsigned activation) {
 
   const ConvLayers_Params* tparams= (ConvLayers_Params*) params;
+  unsigned vec_stride = 1, cols_scale = in_channels;
+  if (tparams->depthwise) {
+    vec_stride = in_channels;
+    out_channels = in_channels;
+    cols_scale = 1;
+  }
 
   // Perform the Convolution. Pad is from 0 to padding and in_time + padding to in_time + 2 * padding
   float* temp_out = (float*)malloc(out_channels * sizeof(float));
@@ -192,8 +198,8 @@ int conv1d(float* output_signal, unsigned out_time, unsigned out_channels, const
     if ((t_in_start >= padding) && (t_in_end < (in_time + padding))) {
       // Filter fully inside the input. Kept as the initial condition, since this is the most common one
       offset_matVec_conv1d(tparams->W, input_signal + (t_in_start - padding) * in_channels,
-              out_channels, kernel_size * in_channels,
-              kernel_size * in_channels, 1, 0, temp_out);
+              out_channels, kernel_size * cols_scale,
+              kernel_size * cols_scale, vec_stride, tparams->depthwise, temp_out);
       memcpy(output_signal + t_index, temp_out, out_channels * sizeof(float));
     } 
     else if ((t_in_start < padding) && (t_in_end >= padding)) {
@@ -202,9 +208,9 @@ int conv1d(float* output_signal, unsigned out_time, unsigned out_channels, const
       // As a part of the filter is outside the input, we need less than "kernel_size" time-steps
       // Hence the number of columns needed reduces. But the whole matrix is a continuous piece of memory. So we need to discard/skip certain columns
       // Hence we provide a separate row_stride to hop from one row to another
-      offset_matVec_conv1d(tparams->W + (padding - t_in_start) * in_channels, 
-                input_signal, out_channels, (t_in_end - padding + 1) * in_channels, 
-                kernel_size * in_channels, 1, 0, temp_out);
+      offset_matVec_conv1d(tparams->W + (padding - t_in_start) * cols_scale, 
+                input_signal, out_channels, (t_in_end - padding + 1) * cols_scale,
+                kernel_size * cols_scale, vec_stride, tparams->depthwise, temp_out);
       memcpy(output_signal + t_index, temp_out, out_channels * sizeof(float));
     }
     else if (t_in_start < (in_time + padding) && (t_in_end >= (in_time + padding))) {
@@ -214,8 +220,8 @@ int conv1d(float* output_signal, unsigned out_time, unsigned out_channels, const
       // Hence the number of columns needed reduces. But the whole matrix is a continuous piece of memory. So we need to discard/skip certain columns
       // Hence we provide a separate row_stride to hop from one row to another
       offset_matVec_conv1d(tparams->W, input_signal  + (t_in_start - padding) * in_channels, 
-                out_channels, (in_time + padding - t_in_start) * in_channels, 
-                kernel_size * in_channels, 1, 0, temp_out);
+                out_channels, (in_time + padding - t_in_start) * cols_scale,
+                kernel_size * cols_scale, vec_stride, tparams->depthwise, temp_out);
       memcpy(output_signal + t_index, temp_out, out_channels * sizeof(float));
     }
     else {
@@ -266,7 +272,7 @@ int conv1d_parallel(float* output_signal, unsigned out_time, unsigned out_channe
   total_in_cols = lcm * in_channels ;
   num_iter = lcm / stride;
   
-  const ConvLayers_Params* tparams= (ConvLayers_Params*) params;
+  const ConvLayers_Parallel_Params* tparams= (ConvLayers_Parallel_Params*) params;
   // Perform the Convolution. Pad is from 0 to padding and in_time + padding to in_time + 2 * padding
   // There are typically 5 cases
   // 1) Filter not yet inside the input
@@ -315,7 +321,7 @@ int conv1d_parallel(float* output_signal, unsigned out_time, unsigned out_channe
     transposed_tiledMatMul(input_signal  + t_in_start * in_channels , tparams->W,  
                             in_rows, ncols, out_channels,
                             total_in_cols, ncols,
-                            temp_out, 100);
+                            temp_out, tparams->block_size);
     // Copy all the data into the output
     for (unsigned t_iter = 0; t_iter < in_rows; t_iter++) {
       memcpy(output_signal + (t_out + t_iter * num_iter) * out_channels,
@@ -355,78 +361,6 @@ int conv1d_parallel(float* output_signal, unsigned out_time, unsigned out_channe
   for (t_out = 0; t_out < out_time; t_out++) {
     unsigned t_index = t_out * out_channels;
     for (unsigned co = 0; co < out_channels; co++) {
-      // Post-Conv activation. More activation functions can be added should the necessity arise
-      if (activation == 1) {
-        output_signal[t_index + co] = sigmoid(output_signal[t_index + co] + tparams->B[co]);
-      }
-      else if (activation == 2) {
-        output_signal[t_index + co] = tanh(output_signal[t_index + co] + tparams->B[co]);
-      }
-      else if (activation == 3) {
-        output_signal[t_index + co] = relu(output_signal[t_index + co] + tparams->B[co]);
-      }
-      else {
-        output_signal[t_index + co] += tparams->B[co];
-      }
-    }
-  }
-  free(temp_out);
-  return 0;
-}
-
-int conv1d_depth(float* output_signal, unsigned out_time, const float* input_signal,
-  unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
-  const void* params, unsigned stride, unsigned activation) {
-
-  const ConvLayers_Params* tparams= (ConvLayers_Params*) params;
-
-  // Perform the Convolution. Pad is from 0 to padding and in_time + padding to in_time + 2 * padding
-  float* temp_out = (float*)malloc(in_channels * sizeof(float));
-  for (unsigned t_in_start = 0, t_in_end = kernel_size - 1, t_out = 0; 
-        t_out < out_time; t_out++, t_in_start += stride, t_in_end += stride) {
-    unsigned t_index = t_out * in_channels;
-
-    // There are typically 5 cases
-    // 1) Filter not yet inside the input
-    // 2) Filter partially inside the input
-    // 3) Filter fully inside the input
-    // 4) Filter partly outside the input
-    // 5) Filter fully outside the input
-    if ((t_in_start >= padding) && (t_in_end < (in_time + padding))) {
-      // Filter fully inside the input. Kept as the initial condition, since this is the most common one
-      offset_matVec_conv1d(tparams->W, input_signal + (t_in_start - padding) * in_channels,
-              in_channels, kernel_size,
-              kernel_size, in_channels, 1, temp_out);
-      memcpy(output_signal + t_index, temp_out, in_channels * sizeof(float));
-    } 
-    else if ((t_in_start < padding) && (t_in_end >= padding)) {
-      // Filter partially entered the input
-      // In this case we using only a part of the weight matrix(assuming shape = in_channels, kernel_size)
-      // As a part of the filter is outside the input, we need less than "kernel_size" time-steps
-      // Hence the number of columns needed reduces. But the whole matrix is a continuous piece of memory. So we need to discard/skip certain columns
-      // Hence we provide a separate row_stride to hop from one row to another
-      offset_matVec_conv1d(tparams->W + (padding - t_in_start), 
-                input_signal, in_channels, (t_in_end - padding + 1), 
-                kernel_size, in_channels, 1, temp_out);
-      memcpy(output_signal + t_index, temp_out, in_channels * sizeof(float));
-    }
-    else if (t_in_start < (in_time + padding) && (t_in_end >= (in_time + padding))) {
-      // Filter partially exited the input
-      // In this case we using only a part of the weight matrix(assuming shape = in_channels, kernel_size)
-      // As a part of the filter is outside the input, we need less than "kernel_size" time-steps
-      // Hence the number of columns needed reduces. But the whole matrix is a continuous piece of memory. So we need to discard/skip certain columns
-      // Hence we provide a separate row_stride to hop from one row to another
-      offset_matVec_conv1d(tparams->W, input_signal  + (t_in_start - padding) * in_channels, 
-                in_channels, (in_time + padding - t_in_start), 
-                kernel_size, in_channels, 1, temp_out);
-      memcpy(output_signal + t_index, temp_out, in_channels * sizeof(float));
-    }
-    else {
-      // Filter completely in the padding region
-      // The filter is either fully outside the input or has not yet entered the input
-      memset(output_signal + t_index, 0, in_channels * sizeof(float));
-    }
-    for (unsigned co = 0; co < in_channels; co++) {
       // Post-Conv activation. More activation functions can be added should the necessity arise
       if (activation == 1) {
         output_signal[t_index + co] = sigmoid(output_signal[t_index + co] + tparams->B[co]);

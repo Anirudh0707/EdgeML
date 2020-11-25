@@ -10,12 +10,14 @@
 
 /**
  * @brief Model parameters for the 1D Convolution Layer
- * @var   W    pointer to the flattened conv weights, original shape for regular = [out_channels, kernel_size, in_channels], shape for depthwise = [in_channels, kernel_size, 1]
- * @var   B    pointer to the bias vector, original shape = [out_channels]
+ * @var   W           pointer to the flattened conv weights, original shape for regular = [out_channels, kernel_size, in_channels], shape for depthwise = [in_channels, kernel_size, 1]
+ * @var   B           pointer to the bias vector, original shape = [out_channels]
+ * @var   depthwise   flag for deciding between regular(=0) and depthwise(=1) conv
  */
 typedef struct ConvLayers_Params {
   const float* const W;
   const float* const B;
+  unsigned depthwise;
 } ConvLayers_Params;
 
 /**
@@ -23,6 +25,7 @@ typedef struct ConvLayers_Params {
  * @param[out]   output_signal    pointer to the output signal, size = out_time * out_channels
  * @param[in]    out_time         number of time steps in the output
  * @param[in]    out_channels     number of output channels for the output of the conv layer
+ *                                NOTE: out_channels == in_channels for depthwise. This is set manually in the function
  * @param[in]    input_signal     pointer to the input signal. size = in_time * in_channels
  * @param[in]    in_time          number of time steps in the input
  * @param[in]    in_channels      number of input channels
@@ -42,15 +45,23 @@ int conv1d(float* output_signal, unsigned out_time, unsigned out_channels, const
   unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
   const void* params, unsigned stride, unsigned activation);
 
-int conv1d_parallel(float* output_signal, unsigned out_time, unsigned out_channels, const float* input_signal,
-  unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
-  const void* params, unsigned stride, unsigned activation);
+/**
+ * @brief Model parameters for the 1D Convolution Layer
+ * @var   W           pointer to the flattened conv weights, original shape for regular = [out_channels, kernel_size, in_channels], shape for depthwise = [in_channels, kernel_size, 1]
+ * @var   B           pointer to the bias vector, original shape = [out_channels]
+ * @var   block_size  block/tile size for the cache. Used for tiled MatMul
+ */
+typedef struct ConvLayers_Parallel_Params {
+  const float* const W;
+  const float* const B;
+  unsigned block_size;
+} ConvLayers_Parallel_Params;
 
 /**
- * @brief Model definition for the 1D Depthwise Convolution Layer. Currently only for dilation = 1
+ * @brief Model definition for the 1D Parallel Convolution Layer. Currently only for dilation = 1. No depthwise.
  * @param[out]   output_signal    pointer to the output signal, size = out_time * in_channels
- *                                NOTE: out_channels == in_channels for depthwise
  * @param[in]    out_time         number of time steps in the output
+ * @param[in]    out_channels     number of output channels for the output of the conv layer
  * @param[in]    input_signal     pointer to the input signal. size = in_time * in_channels
  * @param[in]    in_time          number of time steps in the input
  * @param[in]    in_channels      number of input channels. The output will have the same number of channels
@@ -66,7 +77,7 @@ int conv1d_parallel(float* output_signal, unsigned out_time, unsigned out_channe
  *                                2: tanh
  *                                3: relu
  */
-int conv1d_depth(float* output_signal, unsigned out_time, const float* input_signal,
+int conv1d_parallel(float* output_signal, unsigned out_time, unsigned out_channels, const float* input_signal,
   unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
   const void* params, unsigned stride, unsigned activation);
 
@@ -85,7 +96,8 @@ typedef struct ConvLayers_LR_Params {
 } ConvLayers_LR_Params;
 
 /**
- * @brief Model definition for the 1D Low-Rank Convolution Layer. Currently only for dilation = 1
+ * @brief Model definition for the 1D Low-Rank Convolution Layer. Currently only for dilation = 1. 
+ * @brief Low-Rank and depthwise are incompatible as the low-rank decomposition of the weight matrix violates the depthwise conditions (out_channels % groups = 0, where groups = in_channels)
  * @param[out]   output_signal    pointer to the output signal, size = out_time * out_channels
  * @param[in]    out_time         number of time steps in the output
  * @param[in]    out_channels     number of output channels for the ouput of the conv layer

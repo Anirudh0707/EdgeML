@@ -70,7 +70,7 @@ int phon_pred_depth_point_lr_cnn(float* output_signal, float* input_signal,
       in_place, 0.00001);
     // Depth CNN
     depth_out = (float*)malloc(out_time * in_channels * sizeof(float));
-    conv1d_depth(depth_out, out_time, act_out, 
+    conv1d(depth_out, out_time, 0, act_out, 
       in_time, in_channels, depth_cnn_padding, depth_cnn_kernel_size, 
       depth_cnn_params, depth_cnn_stride, depth_cnn_activation);
     free(act_out);
@@ -86,7 +86,7 @@ int phon_pred_depth_point_lr_cnn(float* output_signal, float* input_signal,
     free(act_out);
     // Depth CNN
     depth_out = (float*)malloc(out_time * in_channels * sizeof(float));
-    conv1d_depth(depth_out, out_time, norm_out, 
+    conv1d(depth_out, out_time, 0, norm_out, 
       in_time, in_channels, depth_cnn_padding, depth_cnn_kernel_size, 
       depth_cnn_params, depth_cnn_stride, depth_cnn_activation);
     free(norm_out);

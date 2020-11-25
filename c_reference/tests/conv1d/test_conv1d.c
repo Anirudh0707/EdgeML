@@ -29,6 +29,7 @@ void conv1d_check() {
   ConvLayers_Params conv_params = {
     .W = CONV1D_CONV_WEIGHT,
     .B = CONV1D_CONV_BIAS,
+    .depthwise = 0,
   };
   
   float* pred = (float*)malloc(CONV1D_OUT_TIME * CONV1D_OUT_FEATURES * sizeof(float));
@@ -42,9 +43,10 @@ void conv1d_check() {
 }
 
 void conv1d_parallel_check() {
-  ConvLayers_Params conv_params = {
+  ConvLayers_Parallel_Params conv_params = {
     .W = CONV1D_CONV_WEIGHT,
     .B = CONV1D_CONV_BIAS,
+    .block_size = 100,
   };
   
   float* pred = (float*)malloc(CONV1D_OUT_TIME * CONV1D_OUT_FEATURES * sizeof(float));
@@ -61,11 +63,12 @@ void conv1d_depth_check() {
   ConvLayers_Params conv_params = {
     .W = CONV1D_DEPTH_CONV_WEIGHT,
     .B = CONV1D_DEPTH_CONV_BIAS,
+    .depthwise = 1,
   };
   
   float* pred = (float*)malloc(CONV1D_DEPTH_OUT_TIME * CONV1D_DEPTH_OUT_FEATURES 
                                 * sizeof(float));
-  conv1d_depth(pred, CONV1D_DEPTH_OUT_TIME, CONV1D_DEPTH_INPUT,
+  conv1d(pred, CONV1D_DEPTH_OUT_TIME, 0, CONV1D_DEPTH_INPUT,
     CONV1D_DEPTH_IN_TIME, CONV1D_DEPTH_IN_FEATURES, CONV1D_DEPTH_PAD, CONV1D_DEPTH_FILT,
     &conv_params, CONV1D_DEPTH_STRIDE, CONV1D_DEPTH_ACT);
   
