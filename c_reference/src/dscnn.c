@@ -9,7 +9,7 @@
 #include "utils.h"
 
 int phon_pred_lr_cnn(float* output_signal, float* input_signal,
-  unsigned in_time, unsigned in_channels,
+  conv_layer cnn, unsigned in_time, unsigned in_channels,
   const float* const mean, const float* const var,
   unsigned affine_config, const float* const gamma, const float* const beta, unsigned in_place,
   unsigned cnn_hidden, unsigned cnn_padding, unsigned cnn_kernel_size,
@@ -23,7 +23,7 @@ int phon_pred_lr_cnn(float* output_signal, float* input_signal,
       mean, var, affine_config, gamma, beta,
       in_place, 0.00001);
     // CNN
-    conv1d_lr(output_signal, out_time, cnn_hidden, input_signal, 
+    cnn(output_signal, out_time, cnn_hidden, input_signal, 
       in_time, in_channels, cnn_padding, cnn_kernel_size, 
       cnn_params, cnn_stride, cnn_activation);
   }
@@ -35,7 +35,7 @@ int phon_pred_lr_cnn(float* output_signal, float* input_signal,
       mean, var, affine_config, gamma, beta,
       in_place, 0.00001);
     // CNN
-    conv1d_lr(output_signal, out_time, cnn_hidden, norm_out, 
+    cnn(output_signal, out_time, cnn_hidden, norm_out, 
       in_time, in_channels, cnn_padding, cnn_kernel_size, 
       cnn_params, cnn_stride, cnn_activation);
     free(norm_out);

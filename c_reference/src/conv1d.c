@@ -131,9 +131,9 @@ int conv1d_lr_parallel(float* output_signal, unsigned out_time, unsigned out_cha
   // But will be needed for the central condition (filter inside input).
   unsigned buffer_steps = in_time / lcm, rank = tparams->rank;
   // Buffer for W2 out
-  float* temp_rank_out = (float*)malloc(buffer_steps * tparams->rank * sizeof(float));
+  float* temp_rank_out = (float*)malloc(buffer_steps * rank * sizeof(float));
   // Buffer for W1 out
-  float* temp_out = (float*)malloc(out_channels * tparams->rank * sizeof(float));
+  float* temp_out = (float*)malloc(buffer_steps * out_channels * sizeof(float));
 
   unsigned t_in_start, t_in_end, t_out; // Values are needed outside the loops. Hence declared here
   for (t_in_start = 0, t_in_end = kernel_size - 1, t_out = 0; 
@@ -165,8 +165,8 @@ int conv1d_lr_parallel(float* output_signal, unsigned out_time, unsigned out_cha
   // Ideally both implementation would be the same. However for edge devices the matMul was found to be faster matVec (both tilied)
   t_in_start -= padding; // remove the padding offset temporarily
   for (unsigned iter = 0; iter < num_iter; iter++, t_in_start += stride, t_out++) {
-    memset(temp_rank_out, 0, buffer_steps * tparams->rank * sizeof(float));
-    memset(temp_out, 0, out_channels * tparams->rank * sizeof(float));
+    memset(temp_rank_out, 0, buffer_steps * rank * sizeof(float));
+    memset(temp_out, 0, buffer_steps * out_channels * sizeof(float));
     unsigned in_rows = (in_time - t_in_start) / lcm;
     if (t_in_end < (t_in_start + ((in_rows - 1) * lcm))) {
       // t_in_end is used to find the furthest time step was used for the calculation
