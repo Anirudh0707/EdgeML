@@ -96,10 +96,31 @@ void conv1d_lr_check() {
   free(pred);
 }
 
+void conv1d_lr_parallel_check() {
+  ConvLayers_LR_Parallel_Params conv_params = {
+    .W1 = CONV1D_LR_CONV_W1,
+    .W2 = CONV1D_LR_CONV_W2,
+    .B = CONV1D_LR_CONV_BIAS,
+    .rank = CONV1D_LR_LOW_RANK,
+    .block_size = 100,
+  };
+  
+  float* pred = (float*)malloc(CONV1D_LR_OUT_TIME 
+                                * CONV1D_LR_OUT_FEATURES * sizeof(float));
+  conv1d_lr_parallel(pred, CONV1D_LR_OUT_TIME, CONV1D_LR_OUT_FEATURES, CONV1D_LR_INPUT,
+    CONV1D_LR_IN_TIME, CONV1D_LR_IN_FEATURES, CONV1D_LR_PAD, CONV1D_LR_FILT,
+    &conv_params, CONV1D_LR_STRIDE, CONV1D_LR_ACT);
+  
+  printf("Testing Low-Rank Parallel Convolution\n");
+  errorCheck(pred, CONV1D_LR_OUTPUT, CONV1D_LR_OUT_TIME, CONV1D_LR_OUT_FEATURES);
+  free(pred);
+}
+
 int main() {
   conv1d_check();
   conv1d_parallel_check();
   conv1d_lr_check();
   conv1d_depth_check();
+  conv1d_lr_parallel_check();
   return 0;
 }

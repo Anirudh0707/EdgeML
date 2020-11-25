@@ -116,6 +116,46 @@ int conv1d_lr(float* output_signal, unsigned out_time, unsigned out_channels, co
   unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
   const void* params, unsigned stride, unsigned activation);
 
+/**
+ * @brief Model parameters for the 1D Low Rank Convolution Layer.
+ * @var    W1      pointer to the flattened 1st low-rank component of the weights, original shape = [out_channels, rank]. For depthwise out_channels = in_channels
+ * @var    W2      pointer to the flattened 2nd low-rank component of the weights, original shape for regular = [rank, kernel_size, in_channels], shape for depthwise = [rank, kernel_size, 1]
+ * @var    B       pointer to the flattened bias vector for the convolution, original shape = [out_channels]
+ * @var    rank    rank of the weight tensor. A low-rank decomposition typically used to reduce computation and storage
+ */
+typedef struct ConvLayers_LR_Parallel_Params {
+  const float* const W1;
+  const float* const W2;
+  const float* const B;
+  unsigned rank;
+  unsigned block_size;
+} ConvLayers_LR_Parallel_Params;
+
+/**
+ * @brief Model definition for the 1D Low-Rank Parallel Convolution Layer. Currently only for dilation = 1. 
+ * @brief Low-Rank and depthwise are incompatible as the low-rank decomposition of the weight matrix violates the depthwise conditions (out_channels % groups = 0, where groups = in_channels)
+ * @param[out]   output_signal    pointer to the output signal, size = out_time * out_channels
+ * @param[in]    out_time         number of time steps in the output
+ * @param[in]    out_channels     number of output channels for the ouput of the conv layer
+ * @param[in]    input_signal     pointer to the input signal. size = in_time * in_channels
+ * @param[in]    in_time          number of time steps in the input
+ * @param[in]    in_channels      number of input channels
+ * @param[in]    padding          padding applied to the input before the conv is performed.
+ *                                Note: padding is applied to both the starting and ending of the input, along the time axis
+ *                                E.g : padding = 3, the input is padded with zeros(for 3 time steps), both before the input_signal(time step 0) and after the input_signal(time step in_time).
+ * @param[in]    kernel_size      kernel size of the conv filter
+ * @param[in]    params           weights, bias and other essential parameters used to describe the layer
+ * @param[in]    stride           stride length for the layer. input_time_iterator += stride for output_time_iterator +=1
+ * @param[in]    activation       an integer to choose the type of activation function.
+ *                                0: none
+ *                                1: sigmoid
+ *                                2: tanh
+ *                                3: relu
+ */
+int conv1d_lr_parallel(float* output_signal, unsigned out_time, unsigned out_channels, const float* input_signal,
+  unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
+  const void* params, unsigned stride, unsigned activation);
+
 // Auxiliary Layers
 /**
  * @brief Model definition for the 1D Average Pooling Layer. Currently only for dilation = 1
