@@ -76,5 +76,8 @@ int backward_bricked_rnn(float* output_signal, unsigned rnn_hidden, float* input
   rnn_layer rnn, const void* params, void* buffers,
   unsigned bi_direction, unsigned sample_last_brick, int normalize);
 
-
+int forward_bricked_rnn_parallel(float* output_signal, unsigned rnn_hidden, 
+  float* input_signal, unsigned in_time, unsigned in_dims, 
+  unsigned window, unsigned hop, const void* params,
+  unsigned bi_direction, unsigned sample_first_brick);
 #endif

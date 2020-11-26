@@ -55,10 +55,14 @@ int main() {
 
   float pred[RNN_OUT_TIME * RNN_OUT_FEATURES] = {};
 
-  forward_bricked_rnn(pred, RNN_OUT_FEATURES >> 1, INPUT,
+  // forward_bricked_rnn(pred, RNN_OUT_FEATURES >> 1, INPUT,
+  //   RNN_IN_TIME, RNN_IN_FEATURES, FWD_WINDOW, HOP,
+  //   fastgrnn_lr, &fwd_RNN_params, &buffers,
+  //   1, 1, 0);
+
+  forward_bricked_rnn_parallel(pred, RNN_OUT_FEATURES >> 1, INPUT,
     RNN_IN_TIME, RNN_IN_FEATURES, FWD_WINDOW, HOP,
-    fastgrnn_lr, &fwd_RNN_params, &buffers,
-    1, 1, 0);
+    &fwd_RNN_params, 1, 1);
 
   backward_bricked_rnn(pred + (RNN_OUT_FEATURES >> 1), RNN_OUT_FEATURES >> 1, INPUT,
     RNN_IN_TIME, RNN_IN_FEATURES, BWD_WINDOW, HOP,
@@ -73,6 +77,7 @@ int main() {
                 * (pred[t * RNN_OUT_FEATURES + d] - OUTPUT[t * RNN_OUT_FEATURES + d]));
       denom += OUTPUT[t * RNN_OUT_FEATURES + d] * OUTPUT[t * RNN_OUT_FEATURES + d];
     }
+    // printf("error %d %f\n", t, error);
   }
   float avg_error = error / (RNN_OUT_TIME * RNN_OUT_FEATURES);
   float rmse = error / denom;
