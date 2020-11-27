@@ -495,67 +495,28 @@ int batchnorm1d(float* output_signal, float* input_signal,
   const float* const mean, const float* const var,
   unsigned affine_config, const float* const gamma , const float* const beta,
   unsigned in_place, float eps) {
+  float* ret = in_place ? (float*)input_signal : (float*)output_signal;
+  
   // Check if affine values was learnt
   if (affine_config == 1) {
-    // Check for in-place computation
-    if (in_place) {
-      for (unsigned t = 0; t < in_time; t++) {
-        for (unsigned d = 0; d < in_channels; d++) {
-          input_signal[t * in_channels + d] = gamma[d]
-                                              * ((input_signal[t * in_channels + d]
-                                              - mean[d]) / sqrt(var[d] + eps))
-                                              + beta[d];
-        }
-      }
-    }
-    else {
-      for (unsigned t = 0; t < in_time; t++) {
-        for (unsigned d = 0; d < in_channels; d++) {
-          output_signal[t * in_channels + d] = gamma[d]
-                                               * ((input_signal[t * in_channels + d]
-                                               - mean[d]) / sqrt(var[d] + eps))
-                                               + beta[d];
-        }
+    while (in_time--) {
+      for (unsigned d = 0; d < in_channels; d++) {
+        *ret++ = gamma[d] * (((*input_signal++) - mean[d]) 
+                          / sqrt(var[d] + eps)) + beta[d];
       }
     }
   }
   else if (affine_config == 2) {
-    // Check for in-place computation
-    if (in_place) {
-      for (unsigned t = 0; t < in_time; t++) {
-        for (unsigned d = 0; d < in_channels; d++) {
-          input_signal[t * in_channels + d] = (gamma[d]
-                                               * input_signal[t * in_channels + d])
-                                               + beta[d];
-        }
-      }
-    }
-    else {
-      for (unsigned t = 0; t < in_time; t++) {
-        for (unsigned d = 0; d < in_channels; d++) {
-          output_signal[t * in_channels + d] = (gamma[d]
-                                                * input_signal[t * in_channels + d])
-                                                + beta[d];
-        }
+    while (in_time--) {
+      for (unsigned d = 0; d < in_channels; d++) {
+        *ret++ = (gamma[d] * (*input_signal++)) + beta[d];
       }
     }
   }
   else {
-      // Check for in-place computation
-    if (in_place) {
-      for (unsigned t = 0; t < in_time; t++) {
-        for (unsigned d = 0; d < in_channels; d++) {
-          input_signal[t * in_channels + d] = (input_signal[t * in_channels + d]
-                                               - mean[d]) / sqrt(var[d] + eps);
-        }
-      }
-    }
-    else {
-      for (unsigned t = 0; t < in_time; t++) {
-        for (unsigned d = 0; d < in_channels; d++) {
-          output_signal[t * in_channels + d] = (input_signal[t * in_channels + d] 
-                                                - mean[d]) / sqrt(var[d] + eps);
-        }
+    while (in_time--) {
+      for (unsigned d = 0; d < in_channels; d++) {
+        *ret++ = ((*input_signal++) - mean[d]) / sqrt(var[d] + eps);
       }
     }
   }
