@@ -53,7 +53,20 @@ int forward_bricked_fastgrnn_lr(float* output_signal, unsigned rnn_hidden,
     float* preComp_offset = (float*)preComp;
     for (unsigned n = 0; n < num_bricks; n++) {
       float* inputMulW_offset = (float*)inputMulW + (n * hop + t) * rnn_hidden;
-      for (unsigned d = 0; d < rnn_hidden; d++) {
+      unsigned hidden = rnn_hidden;
+
+      #ifdef LOOP_UNROLL
+        unsigned len_unroll = hidden >> 2;
+        hidden %= 4;
+        while (len_unroll--) {
+          *preComp_offset++ = *inputMulW_offset++;
+          *preComp_offset++ = *inputMulW_offset++;
+          *preComp_offset++ = *inputMulW_offset++;
+          *preComp_offset++ = *inputMulW_offset++;
+        }
+      #endif
+
+      while (hidden--) {
         *preComp_offset++ = *inputMulW_offset++;
       }
     }
@@ -64,7 +77,8 @@ int forward_bricked_fastgrnn_lr(float* output_signal, unsigned rnn_hidden,
     // Apply the gating
     float* hiddenState_offset = (float*)hiddenState;
     preComp_offset = (float*)preComp;
-    for (unsigned n = 0; n < num_bricks; n++) {
+    unsigned bricks = num_bricks;
+    while (bricks--) {
       float* gateBias = (float*)tparams->Bg;
       float* hiddenBias = (float*)tparams->Bh;
       unsigned hidden = rnn_hidden;
@@ -185,7 +199,20 @@ int backward_bricked_fastgrnn_lr(float* output_signal, unsigned rnn_hidden,
     float* preComp_offset = (float*)preComp;
     for (unsigned n = 0; n < num_bricks; n++) {
       float* inputMulW_offset = (float*)inputMulW + (n * hop + t) * rnn_hidden;
-      for (unsigned d = 0; d < rnn_hidden; d++) {
+      unsigned hidden = rnn_hidden;
+
+      #ifdef LOOP_UNROLL
+        unsigned len_unroll = hidden >> 2;
+        hidden %= 4;
+        while (len_unroll--) {
+          *preComp_offset++ = *inputMulW_offset++;
+          *preComp_offset++ = *inputMulW_offset++;
+          *preComp_offset++ = *inputMulW_offset++;
+          *preComp_offset++ = *inputMulW_offset++;
+        }
+      #endif
+
+      while (hidden--) {
         *preComp_offset++ = *inputMulW_offset++;
       }
     }
@@ -196,7 +223,8 @@ int backward_bricked_fastgrnn_lr(float* output_signal, unsigned rnn_hidden,
     // Apply the gating
     float* hiddenState_offset = (float*)hiddenState;
     preComp_offset = (float*)preComp;
-    for (unsigned n = 0; n < num_bricks; n++) {
+    unsigned bricks = num_bricks;
+    while (bricks--) {
       float* gateBias = (float*)tparams->Bg;
       float* hiddenBias = (float*)tparams->Bh;
       unsigned hidden = rnn_hidden;
