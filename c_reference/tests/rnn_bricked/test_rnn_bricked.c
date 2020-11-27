@@ -44,11 +44,11 @@ int main() {
 
   float* pred = (float*)malloc(RNN_OUT_TIME * RNN_OUT_FEATURES * sizeof(float));
 
-  forward_bricked_rnn_parallel(pred, RNN_OUT_FEATURES >> 1, INPUT,
+  forward_bricked_fastgrnn_lr(pred, RNN_OUT_FEATURES >> 1, INPUT,
     RNN_IN_TIME, RNN_IN_FEATURES, FWD_WINDOW, HOP,
     &fwd_RNN_params, 1, 1);
 
-  backward_bricked_rnn_parallel(pred + (RNN_OUT_FEATURES >> 1), RNN_OUT_FEATURES >> 1, INPUT,
+  backward_bricked_fastgrnn_lr(pred + (RNN_OUT_FEATURES >> 1), RNN_OUT_FEATURES >> 1, INPUT,
     RNN_IN_TIME, RNN_IN_FEATURES, BWD_WINDOW, HOP,
     &bwd_RNN_params, 1, 1);
   

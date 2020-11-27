@@ -174,11 +174,11 @@ void phoneme_prediction(float* mem_buf) {
   /* Bricked Bi-FastGRNN Block */
   out_time = in_time/RNN_HOP + 1;
   float* rnn_out = (float*)malloc(out_time * RNN_OUT_FEATURES * sizeof(float));
-  forward_bricked_rnn_parallel(rnn_out, RNN_OUT_FEATURES >> 1, cnn1_out,
+  forward_bricked_fastgrnn_lr(rnn_out, RNN_OUT_FEATURES >> 1, cnn1_out,
     in_time, RNN_IN_FEATURES, RNN_FWD_WINDOW, RNN_HOP,
     &fwd_RNN_params, RNN_BI_DIR, RNN_SAMPLE_FIRST_BRICK);
 
-  backward_bricked_rnn_parallel(rnn_out + (RNN_OUT_FEATURES >> 1), 
+  backward_bricked_fastgrnn_lr(rnn_out + (RNN_OUT_FEATURES >> 1), 
     RNN_OUT_FEATURES >> 1, cnn1_out,
     in_time, RNN_IN_FEATURES, RNN_BWD_WINDOW, RNN_HOP,
     &bwd_RNN_params, RNN_BI_DIR, RNN_SAMPLE_LAST_BRICK);
