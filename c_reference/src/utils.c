@@ -111,17 +111,47 @@ void offset_matVec_conv1d(const float* mat, const float* vec,
   }
 }
 
-void matMul(const float* const matA, const float* const matB,
+void tiledMatMul_float(const float* const matA, const float* const matB,
   unsigned nrows, unsigned ncommon, unsigned ncols,
-  float alpha, float beta,
-  float* const ret) {
-  for (unsigned row = 0; row < nrows; row++) {
-    for (unsigned col = 0; col < ncols; col++) {
-      float sum = 0;
-      for (unsigned k = 0; k < ncommon; k++) {
-        sum += (matA[row * ncommon + k] * matB[k * ncols + col]);
+  unsigned total_comm_A, unsigned total_cols_B,
+  float* const ret, unsigned block_size) {
+  for (unsigned row = 0; row < nrows; row += block_size) {
+    unsigned row_block_size = (row + block_size < nrows) ? block_size : nrows - row;
+    for (unsigned col = 0; col < ncols; col += block_size) {
+      unsigned col_block_size = (col + block_size < ncols) ? block_size : ncols - col;
+      for (unsigned comm = 0; comm < ncommon; comm += block_size) {
+        unsigned comm_block_size = (comm + block_size < ncommon) ? block_size : ncommon - comm;
+        for (unsigned block_row = row; block_row < row + row_block_size; block_row++) {
+          float *ret_offset = (float *)ret + block_row * ncols + col;
+          for (unsigned block_col = col; block_col < col + col_block_size; block_col++) {
+            float sum = 0;
+            unsigned temp_block_size = comm_block_size;
+            const float *matA_offset = (const float*)matA + block_row * total_comm_A + comm;
+            const float *matB_offset = (const float*)matB + comm * total_cols_B + block_col;
+
+            #ifdef LOOP_UNROLL
+              unsigned len_unroll = temp_block_size >> 2;
+              temp_block_size %= 4; // comm_block_size % 4
+              while (len_unroll--) {
+                sum += (*matA_offset++) * (*matB_offset);
+                matB_offset += ncols;
+                sum += (*matA_offset++) * (*matB_offset);
+                matB_offset += ncols;
+                sum += (*matA_offset++) * (*matB_offset);
+                matB_offset += ncols;
+                sum += (*matA_offset++) * (*matB_offset);
+                matB_offset += ncols;
+              }
+            #endif
+
+            while (temp_block_size--) {
+              sum += (*matA_offset++) * (*matB_offset);
+              matB_offset += ncols;
+            }
+            *ret_offset++ += sum;
+          }
+        } 
       }
-      ret[row * ncols + col] = alpha * ret[row * ncols + col] + beta * sum;
     }
   }
 }

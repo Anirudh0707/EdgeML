@@ -51,23 +51,24 @@ void offset_matVec_conv1d(const float* mat, const float* vec,
   unsigned row_stride, unsigned vec_stride,
   unsigned depthwise, float* ret);
 
-/* Scaled matrix-matrix multiplication: ret = alpha * ret + beta * matA * matB
-   matA      first matrix; size = nrows * ncommon
-   matB      second matrix; size = ncommon * ncols
-   nrows     number of rows in the first matrix
-   ncommon   number of columns in the first matrix/number of rows in the second matrix
-   ncols     number of columns in the second matrix
-   alpha     scaling factor for the previously-stored output matrix
-   beta      scaling factor for the result of the multiplication (matA * matB)
-   ret       matrix multiplication output
- */
-void matMul(const float* const matA, const float* const matB,
+/* Tiled implementation of the Matrix Multiplication
+   matA           first matrix; shape = [nrows, ncommon]
+   matB           second matrix; size = [ncommon, ncols]
+   nrows          number of rows in the first matrix
+   ncommon        number of columns in the first matrix/number of rows in the second matrix
+   ncols          number of columns in the second matrix
+   total_comm_A   The actual offset factor between 2 rows for matA. Used if we need fewer columns than the actual number stored
+   total_cols_B   The actual offset factor between 2 rows for matB. Used if we need fewer columns than the actual number stored. 
+   ret            matrix multiplication output
+   block_size     tile/block size for optimal cache performance. A hardware specific parameter
+*/
+void tiledMatMul_float(const float* const matA, const float* const matB,
   unsigned nrows, unsigned ncommon, unsigned ncols,
-  float alpha, float beta,
-  float* const ret);
+  unsigned total_comm_A, unsigned total_cols_B,
+  float* const ret, unsigned block_size);
 
 /* Tiled implementation of the Matrix Multiplication, but with matB stored in the transposed format
-   The result will the same as matMul but the matrix B will be first transposed and then stored
+   The result will the same as the regular MatMul but the matrix B will be first transposed and then stored
    matA           first matrix; shape = [nrows, ncommon]
    matB           second matrix; size = [ncols, ncommon]
    nrows          number of rows in the first matrix
@@ -77,7 +78,7 @@ void matMul(const float* const matA, const float* const matB,
    total_comm_B   The actual offset factor between 2 rows for matB. Used if we need fewer columns than the actual number stored. 
                   Since matB is transposed the columns are now the ncomm axis
    ret            matrix multiplication output
-   block_size     tile/block size optimal cache performance. A hardware specific parameter
+   block_size     tile/block size for optimal cache performance. A hardware specific parameter
 */
 void transposed_tiledMatMul(const float* const matA, const float* const matB,
   unsigned nrows, unsigned ncommon, unsigned ncols,
