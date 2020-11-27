@@ -124,9 +124,7 @@ void phoneme_prediction(float* mem_buf) {
     .block_size = 100,
   };
 
-  FastGRNN_LR_Params bwd_RNN_params = {
-    .mean   = 0,
-    .stdDev = 0,
+  BrickedFastGRNN_LR_Params bwd_RNN_params = {
     .W1     = B_W1,
     .W2     = B_W2,
     .wRank  = RNN_LOW_RANK,
@@ -136,12 +134,14 @@ void phoneme_prediction(float* mem_buf) {
     .Bg     = B_BIAS_GATE,
     .Bh     = B_BIAS_UPDATE,
     .sigmoid_zeta = sigmoid(B_ZETA),
-    .sigmoid_nu   = sigmoid(B_NU)
+    .sigmoid_nu   = sigmoid(B_NU),
+    .block_size_u_from_lr = 100,
+    .block_size_u_to_lr = 100,
+    .block_size_w_from_lr = 100,
+    .block_size_w_to_lr = 100,
   };
 
-  FastGRNN_LR_Params fwd_RNN_params = {
-    .mean   = 0,
-    .stdDev = 0,
+  BrickedFastGRNN_LR_Params fwd_RNN_params = {
     .W1     = F_W1,
     .W2     = F_W2,
     .wRank  = RNN_LOW_RANK,
@@ -151,7 +151,11 @@ void phoneme_prediction(float* mem_buf) {
     .Bg     = F_BIAS_GATE,
     .Bh     = F_BIAS_UPDATE,
     .sigmoid_zeta = sigmoid(F_ZETA),
-    .sigmoid_nu   = sigmoid(F_NU)
+    .sigmoid_nu   = sigmoid(F_NU),
+    .block_size_u_from_lr = 100,
+    .block_size_u_to_lr = 100,
+    .block_size_w_from_lr = 100,
+    .block_size_w_to_lr = 100,
   };
 
   unsigned in_time, out_time;

@@ -15,7 +15,7 @@ int forward_bricked_fastgrnn_lr(float* output_signal, unsigned rnn_hidden,
   unsigned bi_direction, unsigned sample_first_brick) {
   
   // Buffers and params
-  const FastGRNN_LR_Params* tparams = (const FastGRNN_LR_Params*)params;
+  const BrickedFastGRNN_LR_Params* tparams = (const BrickedFastGRNN_LR_Params*)params;
 
   unsigned rnn_assign_offset = rnn_hidden, out_index = 0;
   unsigned num_bricks = (in_time - window) / hop + 1;
@@ -31,32 +31,41 @@ int forward_bricked_fastgrnn_lr(float* output_signal, unsigned rnn_hidden,
   float* hiddenState = (float*)calloc(num_bricks * rnn_hidden, sizeof(float));
   float* preComp = (float*)calloc(num_bricks * rnn_hidden, sizeof(float));
   transposed_tiledMatMul(input_signal, tparams->W1, in_time, in_dims,
-    tparams->wRank, in_dims, in_dims, tempLR, 100);
+    tparams->wRank, in_dims, in_dims,
+    tempLR, tparams->block_size_w_to_lr);
   transposed_tiledMatMul(tempLR, tparams->W2, in_time, tparams->wRank,
-    rnn_hidden, tparams->wRank, tparams->wRank, inputMulW, 100);
+    rnn_hidden, tparams->wRank, tparams->wRank,
+    inputMulW, tparams->block_size_w_from_lr);
   free(tempLR);
   // We can reuse the low-rank buffer from Wx to Uh, since Wx is computed at one stretch
-  tempLR = (float*)calloc(num_bricks * tparams->uRank, sizeof(float));
+  // memset is used. Hence, malloc can be used here for matMul result initialization
+  tempLR = (float*)malloc(num_bricks * tparams->uRank * sizeof(float));
   for (unsigned t = 0; t < window; t++) {
     // From higher dims to lower dims
     memset(tempLR, 0, num_bricks * tparams->uRank * sizeof(float));
     transposed_tiledMatMul(hiddenState, tparams->U1, num_bricks, rnn_hidden,
-      tparams->uRank, rnn_hidden, rnn_hidden, tempLR, 100);
+      tparams->uRank, rnn_hidden, rnn_hidden,
+      tempLR, tparams->block_size_u_to_lr);
     // From lower dims to higher dims
-    memset(preComp, 0, num_bricks * rnn_hidden * sizeof(float));
-    transposed_tiledMatMul(tempLR, tparams->U2, num_bricks, tparams->uRank,
-      rnn_hidden, tparams->uRank, tparams->uRank, preComp, 100);
-    // Add
+    // Add Wx with Uh
+    // The tiled MatMuls are codes such that they yield result += matA * matB
+    // Hence we use calloc and memset to equate the result to 0
+    // But since we want Wx + Uh, we can store Wx and use the MatMul to add the result over the input
+    float* preComp_offset = (float*)preComp;
     for (unsigned n = 0; n < num_bricks; n++) {
+      float* inputMulW_offset = (float*)inputMulW + (n * hop + t) * rnn_hidden;
       for (unsigned d = 0; d < rnn_hidden; d++) {
-        preComp[n * rnn_hidden + d] += inputMulW[n * hop * rnn_hidden + t * rnn_hidden + d];
+        *preComp_offset++ = *inputMulW_offset++;
       }
     }
+    transposed_tiledMatMul(tempLR, tparams->U2, num_bricks, tparams->uRank,
+      rnn_hidden, tparams->uRank, tparams->uRank,
+      preComp, tparams->block_size_u_from_lr);
     
     // Apply the gating
-    float* hiddenState_offset = hiddenState;
+    float* hiddenState_offset = (float*)hiddenState;
+    preComp_offset = (float*)preComp;
     for (unsigned n = 0; n < num_bricks; n++) {
-      float* preComp_offset = preComp + n * rnn_hidden;
       float* gateBias = (float*)tparams->Bg;
       float* hiddenBias = (float*)tparams->Bh;
       unsigned hidden = rnn_hidden;
@@ -138,7 +147,7 @@ int backward_bricked_fastgrnn_lr(float* output_signal, unsigned rnn_hidden,
   unsigned bi_direction, unsigned sample_last_brick) {
   
   // Buffers and params
-  const FastGRNN_LR_Params* tparams = (const FastGRNN_LR_Params*)params;
+  const BrickedFastGRNN_LR_Params* tparams = (const BrickedFastGRNN_LR_Params*)params;
 
   unsigned rnn_assign_offset = rnn_hidden;
   unsigned num_bricks = (in_time - window) / hop + 1;
@@ -155,9 +164,11 @@ int backward_bricked_fastgrnn_lr(float* output_signal, unsigned rnn_hidden,
   float* hiddenState = (float*)calloc(num_bricks * rnn_hidden, sizeof(float));
   float* preComp = (float*)calloc(num_bricks * rnn_hidden, sizeof(float));
   transposed_tiledMatMul(input_signal, tparams->W1, in_time, in_dims,
-    tparams->wRank, in_dims, in_dims, tempLR, 100);
+    tparams->wRank, in_dims, in_dims,
+    tempLR, tparams->block_size_w_to_lr);
   transposed_tiledMatMul(tempLR, tparams->W2, in_time, tparams->wRank,
-    rnn_hidden, tparams->wRank, tparams->wRank, inputMulW, 100);
+    rnn_hidden, tparams->wRank, tparams->wRank,
+    inputMulW, tparams->block_size_w_from_lr);
   free(tempLR);
   // We can reuse the low-rank buffer from Wx to Uh, since Wx is computed at one stretch
   tempLR = (float*)calloc(num_bricks * tparams->uRank, sizeof(float));
@@ -165,22 +176,28 @@ int backward_bricked_fastgrnn_lr(float* output_signal, unsigned rnn_hidden,
     // From higher dims to lower dims
     memset(tempLR, 0, num_bricks * tparams->uRank * sizeof(float));
     transposed_tiledMatMul(hiddenState, tparams->U1, num_bricks, rnn_hidden,
-      tparams->uRank, rnn_hidden, rnn_hidden, tempLR, 100);
-    // From lower dims to higher dims
-    memset(preComp, 0, num_bricks * rnn_hidden * sizeof(float));
-    transposed_tiledMatMul(tempLR, tparams->U2, num_bricks, tparams->uRank,
-      rnn_hidden, tparams->uRank, tparams->uRank, preComp, 100);
-    // Add
+      tparams->uRank, rnn_hidden, rnn_hidden,
+      tempLR, tparams->block_size_u_to_lr);
+        // From lower dims to higher dims
+    // Add Wx with Uh
+    // The tiled MatMuls are codes such that they yield result += matA * matB
+    // Hence we use calloc and memset to equate the result to 0
+    // But since we want Wx + Uh, we can store Wx and use the MatMul to add the result over the input
+    float* preComp_offset = (float*)preComp;
     for (unsigned n = 0; n < num_bricks; n++) {
+      float* inputMulW_offset = (float*)inputMulW + (n * hop + t) * rnn_hidden;
       for (unsigned d = 0; d < rnn_hidden; d++) {
-        preComp[n * rnn_hidden + d] += inputMulW[n * hop * rnn_hidden + t * rnn_hidden + d];
+        *preComp_offset++ = *inputMulW_offset++;
       }
     }
+    transposed_tiledMatMul(tempLR, tparams->U2, num_bricks, tparams->uRank,
+      rnn_hidden, tparams->uRank, tparams->uRank,
+      preComp, tparams->block_size_u_from_lr);
     
     // Apply the gating
-    float* hiddenState_offset = hiddenState;
+    float* hiddenState_offset = (float*)hiddenState;
+    preComp_offset = (float*)preComp;
     for (unsigned n = 0; n < num_bricks; n++) {
-      float* preComp_offset = preComp + n * rnn_hidden;
       float* gateBias = (float*)tparams->Bg;
       float* hiddenBias = (float*)tparams->Bh;
       unsigned hidden = rnn_hidden;
