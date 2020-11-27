@@ -76,18 +76,35 @@ void offset_matVec_conv1d(const float* mat, const float* vec,
   unsigned row_stride, unsigned vec_stride,
   unsigned depthwise, float* ret) {
 
-  for (unsigned row = 0; row < nrows; row++) {
+  while (nrows--) {
     float sum = 0.0f;
     float* mat_offset = (float*)mat;
     float* vec_offset = (float*)vec;
     unsigned cols = ncols;
+    
+    #ifdef LOOP_UNROLL
+      unsigned len_unroll = cols >> 2;
+      cols %= 4; // ncols % 4
+      while (len_unroll--) {
+        sum += (*mat_offset++) * (*vec_offset);
+        vec_offset += vec_stride;
+        sum += (*mat_offset++) * (*vec_offset);
+        vec_offset += vec_stride;
+        sum += (*mat_offset++) * (*vec_offset);
+        vec_offset += vec_stride;
+        sum += (*mat_offset++) * (*vec_offset);
+        vec_offset += vec_stride;
+      }
+    #endif
+    
     while (cols--) {
       sum += (*mat_offset++) * (*vec_offset);
       vec_offset += vec_stride;
     }
     *ret++ = sum;
     mat += row_stride;
-    // For depthwise, the vec(input) pointer is updated since each row of the mat corresponds to a separate index in the channels
+    // For depthwise, the vec(input) pointer is updated 
+    // Since each row of the mat corresponds to a separate channel index
     if (depthwise) {
       vec++;
     }
@@ -128,8 +145,8 @@ void transposed_tiledMatMul(const float* const matA, const float* const matB,
             const float *matB_offset = (const float*)matB + block_col * total_comm_B + comm;
 
             #ifdef LOOP_UNROLL
-              unsigned len_unroll = comm_block_size >> 2;
-              temp_block_size = comm_block_size % 4;
+              unsigned len_unroll = temp_block_size >> 2;
+              temp_block_size %= 4; // comm_block_size % 4
               while (len_unroll--) {
                 sum += (*matA_offset++) * (*matB_offset++);
                 sum += (*matA_offset++) * (*matB_offset++);
@@ -201,11 +218,31 @@ void softmax(const float* const input, unsigned len, float* const ret) {
 
 void semi_sigmoid_tanh(float* output_signal, const float* const input_signal, 
   unsigned in_time, unsigned in_channels) {
-  unsigned piv = in_channels >> 1;
-  for (unsigned t = 0; t < in_time; t++) {
-    for (unsigned d = 0; d < piv; d++) {
-      output_signal[t * piv + d] = sigmoid(input_signal[t * in_channels + d]) 
-                                   * tanh(input_signal[t * in_channels + d + piv]);
+  unsigned time_step = 0; // used to avoid index multiplication
+  while (in_time--) {
+    unsigned pivot = in_channels >> 1;
+    float* input_sigmoid_offset = (float*)input_signal + time_step;
+    float* input_tanh_offset = (float*)input_signal + time_step + pivot;
+    
+    #ifdef LOOP_UNROLL
+      unsigned len_unroll = pivot >> 2;
+      pivot %= 4;
+      while (len_unroll--) {
+        *output_signal++ = sigmoid(*input_sigmoid_offset++) *
+                          tanh(*input_tanh_offset++);
+        *output_signal++ = sigmoid(*input_sigmoid_offset++) *
+                          tanh(*input_tanh_offset++);
+        *output_signal++ = sigmoid(*input_sigmoid_offset++) *
+                          tanh(*input_tanh_offset++);
+        *output_signal++ = sigmoid(*input_sigmoid_offset++) *
+                          tanh(*input_tanh_offset++);
+      }
+    #endif
+
+    while (pivot--) {
+      *output_signal++ = sigmoid(*input_sigmoid_offset++) *
+                        tanh(*input_tanh_offset++);
     }
+    time_step += in_channels;
   }
 }
