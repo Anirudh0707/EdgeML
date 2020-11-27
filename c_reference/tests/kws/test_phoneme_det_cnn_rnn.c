@@ -7,7 +7,6 @@
 #include <time.h>
 #include "conv1d.h"
 #include "dscnn.h"
-#include "fastgrnn.h"
 #include "utils.h"
 #include "rnn_bricked.h"
 

@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "rnn_bricked.h"
-#include "fastgrnn.h"
 #include "utils.h"
 
 #include "rnn_params.h"

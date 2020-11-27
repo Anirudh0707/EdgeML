@@ -5,7 +5,6 @@
 #include <string.h>
 #include <math.h>
 #include "rnn_bricked.h"
-#include "fastgrnn.h"
 #include "utils.h"
 
 // Forward Pass
