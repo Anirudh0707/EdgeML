@@ -42,32 +42,15 @@ int main() {
     .sigmoid_nu   = sigmoid(F_NU)
   };
 
-  float preComp[RNN_IN_FEATURES] = { 0.0 };
-  float tempLRW[RNN_LOW_RANK] = { 0.0 };
-  float tempLRU[RNN_LOW_RANK] = { 0.0 };
-  float normFeatures[RNN_IN_FEATURES] = { 0.0 };
-  FastGRNN_LR_Buffers buffers = {
-    .preComp = preComp,
-    .tempLRW = tempLRW,
-    .tempLRU = tempLRU,
-    .normFeatures = normFeatures
-  };
-
-  float pred[RNN_OUT_TIME * RNN_OUT_FEATURES] = {};
-
-  // forward_bricked_rnn(pred, RNN_OUT_FEATURES >> 1, INPUT,
-  //   RNN_IN_TIME, RNN_IN_FEATURES, FWD_WINDOW, HOP,
-  //   fastgrnn_lr, &fwd_RNN_params, &buffers,
-  //   1, 1, 0);
+  float* pred = (float*)malloc(RNN_OUT_TIME * RNN_OUT_FEATURES * sizeof(float));
 
   forward_bricked_rnn_parallel(pred, RNN_OUT_FEATURES >> 1, INPUT,
     RNN_IN_TIME, RNN_IN_FEATURES, FWD_WINDOW, HOP,
     &fwd_RNN_params, 1, 1);
 
-  backward_bricked_rnn(pred + (RNN_OUT_FEATURES >> 1), RNN_OUT_FEATURES >> 1, INPUT,
+  backward_bricked_rnn_parallel(pred + (RNN_OUT_FEATURES >> 1), RNN_OUT_FEATURES >> 1, INPUT,
     RNN_IN_TIME, RNN_IN_FEATURES, BWD_WINDOW, HOP,
-    fastgrnn_lr, &bwd_RNN_params, &buffers,
-    1, 1, 0);
+    &bwd_RNN_params, 1, 1);
   
   float error = 0;
   float denom = 0;
@@ -77,11 +60,15 @@ int main() {
                 * (pred[t * RNN_OUT_FEATURES + d] - OUTPUT[t * RNN_OUT_FEATURES + d]));
       denom += OUTPUT[t * RNN_OUT_FEATURES + d] * OUTPUT[t * RNN_OUT_FEATURES + d];
     }
-    // printf("error %d %f\n", t, error);
   }
   float avg_error = error / (RNN_OUT_TIME * RNN_OUT_FEATURES);
   float rmse = error / denom;
+  
+  #ifdef LOOP_UNROLL
+    printf("Loop Unrolling Active\n");
+  #endif
   printf("Testing Bricked RNNs Bi-Directional\n");
   printf("Agg Squared Error: %f ; MSE: %f ; RMSE: %f\n", error, avg_error, rmse);
+  free(pred);
   return 0;
 }

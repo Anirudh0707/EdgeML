@@ -117,6 +117,9 @@ void conv1d_lr_parallel_check() {
 }
 
 int main() {
+  #ifdef LOOP_UNROLL
+    printf("Loop Unrolling Active\n");
+  #endif
   conv1d_check();
   conv1d_parallel_check();
   conv1d_lr_check();

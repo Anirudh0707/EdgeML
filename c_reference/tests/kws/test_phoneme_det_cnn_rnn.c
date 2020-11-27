@@ -154,16 +154,6 @@ void phoneme_prediction(float* mem_buf) {
     .sigmoid_nu   = sigmoid(F_NU)
   };
 
-  float preComp[RNN_IN_FEATURES] = { 0.0 };
-  float tempLRW[RNN_LOW_RANK] = { 0.0 };
-  float tempLRU[RNN_LOW_RANK] = { 0.0 };
-  float normFeatures[RNN_IN_FEATURES] = { 0.0 };
-  FastGRNN_LR_Buffers buffers = {
-    .preComp = preComp,
-    .tempLRW = tempLRW,
-    .tempLRU = tempLRU,
-    .normFeatures = normFeatures
-  };
   unsigned in_time, out_time;
 
   /* Pre-CNN */
@@ -184,15 +174,14 @@ void phoneme_prediction(float* mem_buf) {
   /* Bricked Bi-FastGRNN Block */
   out_time = in_time/RNN_HOP + 1;
   float* rnn_out = (float*)malloc(out_time * RNN_OUT_FEATURES * sizeof(float));
-  forward_bricked_rnn(rnn_out, RNN_OUT_FEATURES >> 1, cnn1_out,
+  forward_bricked_rnn_parallel(rnn_out, RNN_OUT_FEATURES >> 1, cnn1_out,
     in_time, RNN_IN_FEATURES, RNN_FWD_WINDOW, RNN_HOP,
-    fastgrnn_lr, &fwd_RNN_params, &buffers,
-    RNN_BI_DIR, RNN_SAMPLE_FIRST_BRICK, 0);
+    &fwd_RNN_params, RNN_BI_DIR, RNN_SAMPLE_FIRST_BRICK);
 
-  backward_bricked_rnn(rnn_out + (RNN_OUT_FEATURES >> 1), RNN_OUT_FEATURES >> 1, cnn1_out,
+  backward_bricked_rnn_parallel(rnn_out + (RNN_OUT_FEATURES >> 1), 
+    RNN_OUT_FEATURES >> 1, cnn1_out,
     in_time, RNN_IN_FEATURES, RNN_BWD_WINDOW, RNN_HOP,
-    fastgrnn_lr, &bwd_RNN_params, &buffers,
-    RNN_BI_DIR, RNN_SAMPLE_LAST_BRICK, 0);
+    &bwd_RNN_params, RNN_BI_DIR, RNN_SAMPLE_LAST_BRICK);
   free(cnn1_out);
 
   /* Post-CNN */
@@ -266,6 +255,9 @@ void phoneme_prediction(float* mem_buf) {
 }
 
 int main() {
+  #ifdef LOOP_UNROLL
+    printf("Loop Unrolling Active\n");
+  #endif
   clock_t begin = clock();
   phoneme_prediction(INPUT);
   clock_t end = clock();

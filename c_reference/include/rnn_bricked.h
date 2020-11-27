@@ -80,4 +80,9 @@ int forward_bricked_rnn_parallel(float* output_signal, unsigned rnn_hidden,
   float* input_signal, unsigned in_time, unsigned in_dims, 
   unsigned window, unsigned hop, const void* params,
   unsigned bi_direction, unsigned sample_first_brick);
+
+int backward_bricked_rnn_parallel(float* output_signal, unsigned rnn_hidden, 
+  float* input_signal, unsigned in_time, unsigned in_dims, 
+  unsigned window, unsigned hop, const void* params,
+  unsigned bi_direction, unsigned sample_last_brick);
 #endif
