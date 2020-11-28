@@ -7,20 +7,30 @@
 /*  All the matrices/tensors are stored in the row major format
 
    NOTES for the conv layers
+-> The conv1d & conv1d_lr layers work for all cases and can be used unconstrained. 
+   There are no hard constraints for the parallel version, but a points regarding the optimal usage are given below
+-> Dilation = 1 (no dilation) for all cases
 -> For the non-depthwise cases, store the matrices as described below. Permutation might be necessary
--> The low-rank conv layers don't support depthwise computation. This is due to the out_channels/in_channels = 0 constarint. 
+-> The low-rank decomposition cannot be applied to the depthwise weight matrices. This is due to the out_channels/in_channels = 0 constarint imposed by the depthwise convolution. 
    For full-rank this is satisfied since out_channels = in_channels
-   When the weight matrix is decomposed, the constarint is violated (since rank < out_channels ; and out_channels = in_channels for depthwise)
+   But, when the matrix is decomposed, the constarint is violated (since rank < out_channels ; rank is not divisible by in_channels)
+   Hence due to the decomposition being theoretically impossible, we have not provided the support
+   However we suggest a less-efficient alternative => First pre-compute the weights W = W2 * W1 and then use a regular conv
 -> For the parallel cases, the non-overlapping cases of the convolution are computed parallelly using MatMul (since the blocked MatMul is faster)
-   This howver is only valid for when the filter is fully in the input. There would be no-overlapping filters for the edge cases
+   This howver is only valid for when the filter is fully in the input. There would be no-overlapping for the edge cases
    Hence the MatVec code(regular code) is used to calculate these cases
 
-   Constraint
--> Due to the above reason, the parallel layers have to be used only for large in_time inputs
-   This should typically be for in_time (without the padding) greater than 3 times the kernel_size
-   For such short input cases, the code will either yield index-mismatched output or display a segmentration fault
--> This constraint is due to a lack of time steps to parallelize into a matrix
-   For such cases, the MatVec would need to be used
+   Important points regarding parallel versions
+-> Due to the above reason, the parallel layers is only recommended for large in_time inputs
+   This should typically be for in_time (without the padding) > 2 * (kernel_size + stride). Else there would not be enough time-steps to efficiently parallelize
+   For other shorter input cases, the code will skip the MatMul computation and use MatVec instead (but the MatMul-variable computation overhead would remain)
+   For such cases, the MatVec code (conv1d and conv1d_lr) would work more efficiently 
+   The RAM usage would be lower and the function would not have any overheads (calculation of the iterators and MatMul-auxiliary variables)
+-> There is no support for depthwise for conv1d_parallel
+   The regular convolution acts on all the channels while the depthwise acts only on one channel at a time
+   This results in a non-contiguos memory access. MatMul would need to process multiple such time-steps, while the MatVec would only need to process one
+   Hence, the MatVec would be able to enter the next channel earlier and would work much faster
+   While the MatMul would have cache misses (when dealing with the small chache size of edge devices)
 */
 
 /**
