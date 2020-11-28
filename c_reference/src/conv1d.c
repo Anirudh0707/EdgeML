@@ -89,21 +89,12 @@ int conv1d_lr(float* output_signal, unsigned out_time, unsigned out_channels, co
           output_signal[t_index + co] = tanh(output_signal[t_index + co] +
                                           tparams->B[co]);
           break;
-        case 4 :
+
+        case 3 :
           output_signal[t_index + co] = relu(output_signal[t_index + co] +
                                           tparams->B[co]);
           break;
         
-        case 5 :
-          output_signal[t_index + co] = quantSigmoid(output_signal[t_index + co] +
-                                          tparams->B[co]);
-          break;
-
-        case 6 :
-          output_signal[t_index + co] = quantTanh(output_signal[t_index + co] +
-                                          tparams->B[co]);
-          break;
-
         default :
           output_signal[t_index + co] += tparams->B[co];
           break;
@@ -264,21 +255,12 @@ int conv1d_lr_parallel(float* output_signal, unsigned out_time, unsigned out_cha
           output_signal[t_index + co] = tanh(output_signal[t_index + co] +
                                           tparams->B[co]);
           break;
-        case 4 :
+
+        case 3 :
           output_signal[t_index + co] = relu(output_signal[t_index + co] +
                                           tparams->B[co]);
           break;
         
-        case 5 :
-          output_signal[t_index + co] = quantSigmoid(output_signal[t_index + co] +
-                                          tparams->B[co]);
-          break;
-
-        case 6 :
-          output_signal[t_index + co] = quantTanh(output_signal[t_index + co] +
-                                          tparams->B[co]);
-          break;
-
         default :
           output_signal[t_index + co] += tparams->B[co];
           break;
@@ -361,21 +343,12 @@ int conv1d(float* output_signal, unsigned out_time, unsigned out_channels, const
           output_signal[t_index + co] = tanh(output_signal[t_index + co] +
                                           tparams->B[co]);
           break;
-        case 4 :
+
+        case 3 :
           output_signal[t_index + co] = relu(output_signal[t_index + co] +
                                           tparams->B[co]);
           break;
         
-        case 5 :
-          output_signal[t_index + co] = quantSigmoid(output_signal[t_index + co] 
-                                          + tparams->B[co]);
-          break;
-
-        case 6 :
-          output_signal[t_index + co] = quantTanh(output_signal[t_index + co] +
-                                          tparams->B[co]);
-          break;
-
         default :
           output_signal[t_index + co] += tparams->B[co];
           break;
@@ -515,21 +488,12 @@ int conv1d_parallel(float* output_signal, unsigned out_time, unsigned out_channe
           output_signal[t_index + co] = tanh(output_signal[t_index + co] +
                                           tparams->B[co]);
           break;
-        case 4 :
+
+        case 3 :
           output_signal[t_index + co] = relu(output_signal[t_index + co] +
                                           tparams->B[co]);
           break;
         
-        case 5 :
-          output_signal[t_index + co] = quantSigmoid(output_signal[t_index + co] +
-                                          tparams->B[co]);
-          break;
-
-        case 6 :
-          output_signal[t_index + co] = quantTanh(output_signal[t_index + co] +
-                                          tparams->B[co]);
-          break;
-
         default :
           output_signal[t_index + co] += tparams->B[co];
           break;
@@ -565,16 +529,9 @@ int avgpool1d(float* output_signal, unsigned out_time, const float* input_signal
         case 2 :
           output_signal[t_out * in_channels + ci] = tanh(sum * scale);
           break;
-        case 4 :
-          output_signal[t_out * in_channels + ci] = relu(sum * scale);
-          break;
-        
-        case 5 :
-          output_signal[t_out * in_channels + ci] = quantSigmoid(sum * scale);
-          break;
 
-        case 6 :
-          output_signal[t_out * in_channels + ci] = quantTanh(sum * scale);
+        case 3 :
+          output_signal[t_out * in_channels + ci] = relu(sum * scale);
           break;
 
         default :
