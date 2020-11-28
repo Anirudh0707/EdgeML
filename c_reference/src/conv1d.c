@@ -517,14 +517,14 @@ int batchnorm1d(float* output_signal, float* input_signal,
         unsigned len_unroll = channels >> 2;
         channels %= 4;
         while (len_unroll--) {
-        *ret++ = (*gamma_offset++) * (((*input_signal++) - (*mean_offset++)) /
-                    sqrt((*var_offset++) + eps)) + (*beta_offset++);
-        *ret++ = (*gamma_offset++) * (((*input_signal++) - (*mean_offset++)) /
-                    sqrt((*var_offset++) + eps)) + (*beta_offset++);
-        *ret++ = (*gamma_offset++) * (((*input_signal++) - (*mean_offset++)) /
-                    sqrt((*var_offset++) + eps)) + (*beta_offset++);
-        *ret++ = (*gamma_offset++) * (((*input_signal++) - (*mean_offset++)) /
-                    sqrt((*var_offset++) + eps)) + (*beta_offset++);
+          *ret++ = (*gamma_offset++) * (((*input_signal++) - (*mean_offset++)) /
+                      sqrt((*var_offset++) + eps)) + (*beta_offset++);
+          *ret++ = (*gamma_offset++) * (((*input_signal++) - (*mean_offset++)) /
+                      sqrt((*var_offset++) + eps)) + (*beta_offset++);
+          *ret++ = (*gamma_offset++) * (((*input_signal++) - (*mean_offset++)) /
+                      sqrt((*var_offset++) + eps)) + (*beta_offset++);
+          *ret++ = (*gamma_offset++) * (((*input_signal++) - (*mean_offset++)) /
+                      sqrt((*var_offset++) + eps)) + (*beta_offset++);
         }
       #endif
 
