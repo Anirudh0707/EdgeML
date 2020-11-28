@@ -64,7 +64,8 @@ void phoneme_prediction(float* mem_buf) {
     .W2 = CNN1_W2,
     .B = CNN1_BIAS,
     .rank = PRE_CNN_LOW_RANK,
-    .block_size = 100,
+    .block_size_to_lr = 100,
+    .block_size_from_lr = 100,
   };
 
   ConvLayers_Params depth_param_2 = {
@@ -78,7 +79,8 @@ void phoneme_prediction(float* mem_buf) {
     .W2 = CNN2_POINT_W2,
     .B = CNN2_POINT_BIAS,
     .rank = POST_CNN_LOW_RANK,
-    .block_size = 100,
+    .block_size_to_lr = 100,
+    .block_size_from_lr = 100,
   };
 
   ConvLayers_Params depth_param_3 = {
@@ -92,7 +94,8 @@ void phoneme_prediction(float* mem_buf) {
     .W2 = CNN3_POINT_W2,
     .B = CNN3_POINT_BIAS,
     .rank = POST_CNN_LOW_RANK,
-    .block_size = 100,
+    .block_size_to_lr = 100,
+    .block_size_from_lr = 100,
   };
 
   ConvLayers_Params depth_param_4 = {
@@ -106,7 +109,8 @@ void phoneme_prediction(float* mem_buf) {
     .W2 = CNN4_POINT_W2,
     .B = CNN4_POINT_BIAS,
     .rank = POST_CNN_LOW_RANK,
-    .block_size = 100,
+    .block_size_to_lr = 100,
+    .block_size_from_lr = 100,
   };
 
   ConvLayers_Params depth_param_5 = {
@@ -120,7 +124,8 @@ void phoneme_prediction(float* mem_buf) {
     .W2 = CNN5_POINT_W2,
     .B = CNN5_POINT_BIAS,
     .rank = POST_CNN_LOW_RANK,
-    .block_size = 100,
+    .block_size_to_lr = 100,
+    .block_size_from_lr = 100,
   };
 
   BrickedFastGRNN_LR_Params bwd_RNN_params = {

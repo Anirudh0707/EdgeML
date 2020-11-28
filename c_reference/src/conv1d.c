@@ -14,62 +14,52 @@ int conv1d_lr(float* output_signal, unsigned out_time, unsigned out_channels, co
   const ConvLayers_LR_Params* tparams= (ConvLayers_LR_Params*) params;
   
   // Perform the convolution. Zero-pad is from 0 to padding and in_time + padding to in_time + 2 * padding
+  unsigned rank = tparams->rank;
   // Buffer for W2 out
-  float* temp_rank_out = (float*)malloc(tparams->rank * sizeof(float));
+  float* temp_rank_out = (float*)malloc(rank * sizeof(float));
   // Buffer for W1 out
   float* temp_out = (float*)malloc(out_channels * sizeof(float));
   for (unsigned t_in_start = 0, t_in_end = kernel_size - 1, t_out = 0; 
         t_out < out_time; t_out++, t_in_start += stride, t_in_end += stride) {
     unsigned t_index = t_out * out_channels;
 
-    // There are typically 5 cases
-    // 1) Filter not yet inside the input
-    // 2) Filter partially inside the input
-    // 3) Filter fully inside the input
-    // 4) Filter partly outside the input
-    // 5) Filter fully outside the input
     if ((t_in_start >= padding) && (t_in_end < (in_time + padding))) {
       // Filter fully inside the input. Kept as the initial condition, since this is the most common one
       offset_matVec_conv1d(tparams->W2,
         input_signal + (t_in_start - padding) * in_channels,
-        tparams->rank, kernel_size * in_channels,
+        rank, kernel_size * in_channels,
         kernel_size * in_channels, 1, 0, temp_rank_out);
-      // The row_stride and ncols are provided with the same value in the function call below and vec_stride = 1, depthwise = 0 
-      // Hence, this call will be the same as a regular MatVec function call (without any scaling)
+      // row_stride = ncols, vec_stride = 1, depthwise = 0. Hence the call is identical to a regular MatVec (without scaling)
       offset_matVec_conv1d(tparams->W1, temp_rank_out, out_channels,
-        tparams->rank, tparams->rank, 1, 0, temp_out);
+        rank, rank, 1, 0, temp_out);
       memcpy(output_signal + t_index, temp_out, out_channels * sizeof(float));
     } 
     else if ((t_in_start < padding) && (t_in_end >= padding)) {
       // Filter partially entered the input
-      // In this case we using only a part of the weight matrix(assuming shape = out_channels, kernel_size * in_channels)
-      // As a part of the filter is outside the input, we need less than "kernel_size" time-steps
-      // Hence the number of columns needed reduces. But the whole matrix is a continuous piece of memory. So we need to discard/skip certain columns
-      // Hence we provide a separate row_stride to hop from one row to another
+      // As a part of the filter is outside the input, we need less than "kernel_size" time-steps. 
+      // We will only be using a part of the weight matrix(assuming shape = out_channels, kernel_size * in_channels)
+      // Hence we provide a separate row_stride paramemter to discard/skip certain columns in the weight matrix
       offset_matVec_conv1d(tparams->W2 + (padding - t_in_start) * in_channels, 
-        input_signal, tparams->rank,
+        input_signal, rank,
         (t_in_end - padding + 1) * in_channels, 
         kernel_size * in_channels, 1, 0, temp_rank_out);
-      // The row_stride and ncols are provided with the same value in the function call below and vec_stride = 1, depthwise = 0 
-      // Hence, this call will be the same as a regular MatVec function call (without any scaling)
+      // row_stride = ncols, vec_stride = 1, depthwise = 0. Hence the call is identical to a regular MatVec (without scaling)
       offset_matVec_conv1d(tparams->W1, temp_rank_out, out_channels,
-        tparams->rank, tparams->rank, 1, 0, temp_out); 
+        rank, rank, 1, 0, temp_out); 
       memcpy(output_signal + t_index, temp_out, out_channels * sizeof(float));
     }
     else if (t_in_start < (in_time + padding) && (t_in_end >= (in_time + padding))) {
       // Filter partially exited the input
-      // In this case we using only a part of the weight matrix(assuming shape = out_channels, kernel_size * in_channels)
-      // As a part of the filter is outside the input, we need less than "kernel_size" time-steps
-      // Hence the number of columns needed reduces. But the whole matrix is a continuous piece of memory. So we need to discard/skip certain columns
-      // Hence we provide a separate row_stride to hop from one row to another
+      // As a part of the filter is outside the input, we need less than "kernel_size" time-steps. 
+      // We will only be using a part of the weight matrix(assuming shape = out_channels, kernel_size * in_channels)
+      // Hence we provide a separate row_stride paramemter to discard/skip certain columns in the weight matrix
       offset_matVec_conv1d(tparams->W2,
         input_signal  + (t_in_start - padding) * in_channels, 
-        tparams->rank, (in_time + padding - t_in_start) * in_channels, 
+        rank, (in_time + padding - t_in_start) * in_channels, 
         kernel_size * in_channels, 1, 0, temp_rank_out);
-      // The row_stride and ncols are provided with the same value in the function call below and vec_stride = 1, depthwise = 0 
-      // Hence, this call will be the same as a regular MatVec function call (without any scaling)
+      // row_stride = ncols, vec_stride = 1, depthwise = 0. Hence the call is identical to a regular MatVec (without scaling)
       offset_matVec_conv1d(tparams->W1, temp_rank_out, out_channels,
-        tparams->rank, tparams->rank, 1, 0, temp_out);
+        rank, rank, 1, 0, temp_out);
       memcpy(output_signal + t_index, temp_out, out_channels * sizeof(float));
     }
     else {
@@ -110,44 +100,26 @@ int conv1d_lr_parallel(float* output_signal, unsigned out_time, unsigned out_cha
   unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
   const void* params, unsigned stride, unsigned activation) {
 
-  // Compute the LCM. Necessary  for the MatMul iterations
-  unsigned total_in_cols, num_iter, ncols = kernel_size * in_channels; // MatMul variables
-  unsigned gcd, temp, temp_lcm_1 = kernel_size, temp_lcm_2 = stride; // LCM variables
-  while (1){
-    if(!temp_lcm_1){
-      gcd = temp_lcm_2;
-      break;
-    }
-    else{
-      temp = temp_lcm_2;
-      temp_lcm_2 = temp_lcm_1;
-      temp_lcm_1 = temp % temp_lcm_1;
-    }
+  unsigned ncols = kernel_size * in_channels, num_iter = 0, num_steps_one_col = 0;
+  // Calculate the number of time steps in one column for the first non-overlapping instance
+  while (num_steps_one_col < kernel_size) {
+    num_steps_one_col += stride;
+    num_iter++;
   }
-  // The LCM is the number of time steps to linearise into one vector. Non-overlaping kernels are the rows
-  unsigned lcm = kernel_size * stride / gcd;
-  total_in_cols = lcm * in_channels ;
-  num_iter = lcm / stride;
+  unsigned total_in_cols = num_steps_one_col * in_channels;
   
   const ConvLayers_LR_Parallel_Params* tparams = (ConvLayers_LR_Parallel_Params*) params;
   // Perform the convolution. Zero-pad is from 0 to padding and in_time + padding to in_time + 2 * padding
-  // There are typically 5 cases
-  // 1) Filter not yet inside the input
-  // 2) Filter partially inside the input
-  // 3) Filter fully inside the input
-  // 4) Filter partly outside the input
-  // 5) Filter fully outside the input
-
   // Buffer to hold the output. For corner cases, this will be realtively big. 
   // But will be needed for the central condition (filter inside input).
-  unsigned buffer_steps = in_time / lcm, rank = tparams->rank;
+  unsigned buffer_steps = in_time / num_steps_one_col, rank = tparams->rank;
   // Buffer for W2 out
   float* temp_rank_out = (float*)malloc(buffer_steps * rank * sizeof(float));
   // Buffer for W1 out
   float* temp_out = (float*)malloc(buffer_steps * out_channels * sizeof(float));
 
   unsigned t_in_start, t_in_end, t_out; // Values are needed outside the loops. Hence declared here
-  for (t_in_start = 0, t_in_end = kernel_size - 1, t_out = 0; 
+  for (t_in_start = 0, t_in_end = kernel_size - 1, t_out = 0;
         t_in_start < padding && t_out < out_time;
         t_out++, t_in_start += stride, t_in_end += stride) {
     if (t_in_end < padding) {
@@ -157,64 +129,66 @@ int conv1d_lr_parallel(float* output_signal, unsigned out_time, unsigned out_cha
     } 
     else { //(t_in_end >= padding)
       // Filter partially entered the input
-      // In this case we using only a part of the weight matrix(assuming shape = out_channels, kernel_size * in_channels)
-      // As a part of the filter is outside the input, we need less than "kernel_size" time-steps
-      // Hence the number of columns needed reduces. But the whole matrix is a continuous piece of memory. So we need to discard/skip certain columns
-      // Hence we provide a separate row_stride to hop from one row to another
+      // As a part of the filter is outside the input, we need less than "kernel_size" time-steps. 
+      // We will only be using a part of the weight matrix(assuming shape = out_channels, kernel_size * in_channels)
+      // Hence we provide a separate row_stride paramemter to discard/skip certain columns in the weight matrix
       offset_matVec_conv1d(tparams->W2 + (padding - t_in_start) * in_channels, 
         input_signal, rank, (t_in_end - padding + 1) * in_channels, 
         kernel_size * in_channels, 1, 0, temp_rank_out);
-      // The row_stride and ncols are provided with the same value in the function call below and vec_stride = 1, depthwise = 0 
-      // Hence, this call will be the same as a regular MatVec function call (without any scaling)
+      // row_stride = ncols, vec_stride = 1, depthwise = 0. Hence the call is identical to a regular MatVec (without scaling)
       offset_matVec_conv1d(tparams->W1, temp_rank_out, out_channels,
         rank, rank, 1, 0, temp_out); 
       memcpy(output_signal + t_out * out_channels, 
         temp_out, out_channels * sizeof(float));
     }
   }
-  // The main part, when the Filter is fully inside the input. We can think of the non-overlapping cases as parallel cases
-  // For the overlapingcases, each of the iterations is used for the same. Hence we find the lcm for the best parallel factor
-  // Using the above logic, we can convert the matVec opeartion into a matMul operation
+  // The main part => the filter is fully inside the input. We can think of the non-overlapping cases as parallel cases
+  // Each of the iterations are for the kernel striding to the next point till the filter is out of the overlapping region 
+  // Hence we use the num_steps_one_col for calculating the number of time steps to be linearized in one column
+  // Using the above logic, we can convert the MatVec opeartion into a MatMul operation
   // Ideally both implementation would be the same. However for edge devices the matMul was found to be faster matVec (both tilied)
   t_in_start -= padding; // remove the padding offset temporarily
   for (unsigned iter = 0; iter < num_iter; iter++, t_in_start += stride, t_out++) {
     memset(temp_rank_out, 0, buffer_steps * rank * sizeof(float));
     memset(temp_out, 0, buffer_steps * out_channels * sizeof(float));
-    unsigned in_rows = (in_time - t_in_start) / lcm;
-    if (t_in_end < (t_in_start + ((in_rows - 1) * lcm))) {
-      // t_in_end is used to find the furthest time step was used for the calculation
-      // This value will be use for the final iteration
-      t_in_end = ((in_rows - 1) * lcm) + t_in_start;
+    unsigned in_rows = (in_time - t_in_start) / num_steps_one_col;
+    if (t_in_end < (t_in_start + ((in_rows - 1) * num_steps_one_col))) {
+      // t_in_end is used to find the furthest time step was used in the MatMul calculation
+      // This value will be use for the final section of the processing
+      t_in_end = ((in_rows - 1) * num_steps_one_col) + t_in_start;
     }
     transposed_tiledMatMul(input_signal  + t_in_start * in_channels , tparams->W2,  
       in_rows, ncols, rank, total_in_cols, ncols,
-      temp_rank_out, tparams->block_size);
+      temp_rank_out, tparams->block_size_to_lr);
     transposed_tiledMatMul(temp_rank_out , tparams->W1,  
       in_rows, rank, out_channels, rank, rank,
-      temp_out, tparams->block_size);
+      temp_out, tparams->block_size_from_lr);
     // Copy all the data into the output
-    for (unsigned t_iter = 0; t_iter < in_rows; t_iter++) {
-      memcpy(output_signal + (t_out + t_iter * num_iter) * out_channels,
-        temp_out + t_iter * out_channels, out_channels * sizeof(float));
+    float* output_offset = (float*)output_signal + t_out * out_channels;
+    float* temp_offset = (float*)temp_out;
+    unsigned t_iter = in_rows, offset_factor_for_out =  num_iter * out_channels;
+    while (t_iter--) {
+      memcpy(output_offset, temp_offset, out_channels * sizeof(float));
+      output_offset += offset_factor_for_out;
+      temp_offset += out_channels;
     }
   }
   // Initialize the time iterators outside the loop for readability
+  // Use the sotred value in t_in_end to calculate the iterators
   t_in_start = t_in_end + padding + stride; // Add the padding and stride offsets again
   t_in_end = t_in_start + kernel_size - 1;
   t_out = t_in_start / stride;
   for (; t_out < out_time; t_out++, t_in_start += stride, t_in_end += stride) {
     if (t_in_start < (in_time + padding) && (t_in_end >= (in_time + padding))) {
       // Filter partially exited the input
-      // In this case we using only a part of the weight matrix(assuming shape = out_channels, kernel_size * in_channels)
-      // As a part of the filter is outside the input, we need less than "kernel_size" time-steps
-      // Hence the number of columns needed reduces. But the whole matrix is a continuous piece of memory. So we need to discard/skip certain columns
-      // Hence we provide a separate row_stride to hop from one row to another
+      // As a part of the filter is outside the input, we need less than "kernel_size" time-steps. 
+      // We will only be using a part of the weight matrix(assuming shape = out_channels, kernel_size * in_channels)
+      // Hence we provide a separate row_stride paramemter to discard/skip certain columns in the weight matrix
       offset_matVec_conv1d(tparams->W2,
         input_signal  + (t_in_start - padding) * in_channels, 
         rank, (in_time + padding - t_in_start) * in_channels, 
         kernel_size * in_channels, 1, 0, temp_rank_out);
-      // The row_stride and ncols are provided with the same value in the function call below and vec_stride = 1, depthwise = 0 
-      // Hence, this call will be the same as a regular MatVec function call (without any scaling)
+      // row_stride = ncols, vec_stride = 1, depthwise = 0. Hence the call is identical to a regular MatVec (without scaling)
       offset_matVec_conv1d(tparams->W1, temp_rank_out, out_channels,
         rank, rank, 1, 0, temp_out);
       memcpy(output_signal + t_out * out_channels,
@@ -222,13 +196,12 @@ int conv1d_lr_parallel(float* output_signal, unsigned out_time, unsigned out_cha
     }
     else if (t_in_start < (in_time + padding) && (t_in_end < (in_time + padding))) {
       // Filter fully in the input but very close to the edges. 
-      // Due to the lcm divisibility constrinat in the parallel step, these computations might be skipped
+      // Due to the num_steps_one_col divisibility usage in the parallel step, some computations would be skipped
       offset_matVec_conv1d(tparams->W2,
         input_signal + (t_in_start - padding) * in_channels,
         rank, kernel_size * in_channels,
         kernel_size * in_channels, 1, 0, temp_rank_out);
-      // The row_stride and ncols are provided with the same value in the function call below and vec_stride = 1, depthwise = 0 
-      // Hence, this call will be the same as a regular MatVec function call (without any scaling)
+      // row_stride = ncols, vec_stride = 1, depthwise = 0. Hence the call is identical to a regular MatVec (without scaling)
       offset_matVec_conv1d(tparams->W1, temp_rank_out, out_channels,
         rank, rank, 1, 0, temp_out);
       memcpy(output_signal + t_out * out_channels,
@@ -289,12 +262,6 @@ int conv1d(float* output_signal, unsigned out_time, unsigned out_channels, const
         t_out < out_time; t_out++, t_in_start += stride, t_in_end += stride) {
     unsigned t_index = t_out * out_channels;
 
-    // There are typically 5 cases
-    // 1) Filter not yet inside the input
-    // 2) Filter partially inside the input
-    // 3) Filter fully inside the input
-    // 4) Filter partly outside the input
-    // 5) Filter fully outside the input
     if ((t_in_start >= padding) && (t_in_end < (in_time + padding))) {
       // Filter fully inside the input. Kept as the initial condition, since this is the most common one
       offset_matVec_conv1d(tparams->W,
@@ -305,10 +272,9 @@ int conv1d(float* output_signal, unsigned out_time, unsigned out_channels, const
     } 
     else if ((t_in_start < padding) && (t_in_end >= padding)) {
       // Filter partially entered the input
-      // In this case we using only a part of the weight matrix(assuming shape = out_channels, kernel_size * in_channels)
-      // As a part of the filter is outside the input, we need less than "kernel_size" time-steps
-      // Hence the number of columns needed reduces. But the whole matrix is a continuous piece of memory. So we need to discard/skip certain columns
-      // Hence we provide a separate row_stride to hop from one row to another
+      // As a part of the filter is outside the input, we need less than "kernel_size" time-steps. 
+      // We will only be using a part of the weight matrix(assuming shape = out_channels, kernel_size * in_channels)
+      // Hence we provide a separate row_stride paramemter to discard/skip certain columns in the weight matrix
       offset_matVec_conv1d(tparams->W + (padding - t_in_start) * cols_scale, 
         input_signal, out_channels, (t_in_end - padding + 1) * cols_scale,
         kernel_size * cols_scale, vec_stride, tparams->depthwise, temp_out);
@@ -316,10 +282,9 @@ int conv1d(float* output_signal, unsigned out_time, unsigned out_channels, const
     }
     else if (t_in_start < (in_time + padding) && (t_in_end >= (in_time + padding))) {
       // Filter partially exited the input
-      // In this case we using only a part of the weight matrix(assuming shape = out_channels, kernel_size * in_channels)
-      // As a part of the filter is outside the input, we need less than "kernel_size" time-steps
-      // Hence the number of columns needed reduces. But the whole matrix is a continuous piece of memory. So we need to discard/skip certain columns
-      // Hence we provide a separate row_stride to hop from one row to another
+      // As a part of the filter is outside the input, we need less than "kernel_size" time-steps. 
+      // We will only be using a part of the weight matrix(assuming shape = out_channels, kernel_size * in_channels)
+      // Hence we provide a separate row_stride paramemter to discard/skip certain columns in the weight matrix
       offset_matVec_conv1d(tparams->W,
         input_signal  + (t_in_start - padding) * in_channels, 
         out_channels, (in_time + padding - t_in_start) * cols_scale,
@@ -363,37 +328,19 @@ int conv1d_parallel(float* output_signal, unsigned out_time, unsigned out_channe
   unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
   const void* params, unsigned stride, unsigned activation) {
   
-  // Compute the LCM. Necessary  for the MatMul iterations
-  unsigned total_in_cols, num_iter, ncols = kernel_size * in_channels; // MatMul variables
-  unsigned gcd, temp, temp_lcm_1 = kernel_size, temp_lcm_2 = stride; // LCM variables
-  while (1){
-    if(!temp_lcm_1){
-      gcd = temp_lcm_2;
-      break;
-    }
-    else{
-      temp = temp_lcm_2;
-      temp_lcm_2 = temp_lcm_1;
-      temp_lcm_1 = temp % temp_lcm_1;
-    }
+  unsigned ncols = kernel_size * in_channels, num_iter = 0, num_steps_one_col = 0;
+  // Calculate the number of time steps in one column for the first non-overlapping instance
+  while (num_steps_one_col < kernel_size) {
+    num_steps_one_col += stride;
+    num_iter++;
   }
-  // The LCM is the number of time steps to linearise into one vector. Non-overlaping kernels are the rows
-  unsigned lcm = kernel_size * stride / gcd;
-  total_in_cols = lcm * in_channels ;
-  num_iter = lcm / stride;
-  
+  unsigned total_in_cols = num_steps_one_col * in_channels;
+
   const ConvLayers_Parallel_Params* tparams = (ConvLayers_Parallel_Params*) params;
   // Perform the Convolution. Pad is from 0 to padding and in_time + padding to in_time + 2 * padding
-  // There are typically 5 cases
-  // 1) Filter not yet inside the input
-  // 2) Filter partially inside the input
-  // 3) Filter fully inside the input
-  // 4) Filter partly outside the input
-  // 5) Filter fully outside the input
-
   // Buffer to hold the output. For corner cases, this will be realtively big. 
   // But will be needed for the central condition (filter inside input).
-  unsigned buffer_steps = in_time / lcm;
+  unsigned buffer_steps = in_time / num_steps_one_col;
   float* temp_out = (float*)malloc(buffer_steps * out_channels * sizeof(float));
   unsigned t_in_start, t_in_end, t_out; // Values are needed outside the loops. Hence declared here
   for (t_in_start = 0, t_in_end = kernel_size - 1, t_out = 0; 
@@ -406,10 +353,9 @@ int conv1d_parallel(float* output_signal, unsigned out_time, unsigned out_channe
     } 
     else { //(t_in_end >= padding)
       // Filter partially entered the input
-      // In this case we using only a part of the weight matrix(assuming shape = out_channels, kernel_size * in_channels)
-      // As a part of the filter is outside the input, we need less than "kernel_size" time-steps
-      // Hence the number of columns needed reduces. But the whole matrix is a continuous piece of memory. So we need to discard/skip certain columns
-      // Hence we provide a separate row_stride to hop from one row to another
+      // As a part of the filter is outside the input, we need less than "kernel_size" time-steps. 
+      // We will only be using a part of the weight matrix(assuming shape = out_channels, kernel_size * in_channels)
+      // Hence we provide a separate row_stride paramemter to discard/skip certain columns in the weight matrix
       offset_matVec_conv1d(tparams->W + (padding - t_in_start) * in_channels,
         input_signal, out_channels, (t_in_end - padding + 1) * in_channels,
         ncols, 1, 0, temp_out);
@@ -417,39 +363,44 @@ int conv1d_parallel(float* output_signal, unsigned out_time, unsigned out_channe
         temp_out, out_channels * sizeof(float));
     }
   }
-  // The main part, when the Filter is fully inside the input. We can think of the non-overlapping cases as parallel cases
-  // For the overlapingcases, each of the iterations is used for the same. Hence we find the lcm for the best parallel factor
-  // Using the above logic, we can convert the matVec opeartion into a matMul operation
+  // The main part => the filter is fully inside the input. We can think of the non-overlapping cases as parallel cases
+  // Each of the iterations are for the kernel striding to the next point till the filter is out of the overlapping region 
+  // Hence we use the num_steps_one_col for calculating the number of time steps to be linearized in one column
+  // Using the above logic, we can convert the MatVec opeartion into a MatMul operation
   // Ideally both implementation would be the same. However for edge devices the matMul was found to be faster matVec (both tilied)
   t_in_start -= padding; // remove the padding offset temporarily
   for (unsigned iter = 0; iter < num_iter; iter++, t_in_start += stride, t_out++) {
     memset(temp_out, 0, buffer_steps * out_channels * sizeof(float));
-    unsigned in_rows = (in_time - t_in_start) / lcm;
-    if (t_in_end < (t_in_start + ((in_rows - 1) * lcm))) {
-      // t_in_end is used to find the furthest time step was used for the calculation
-      // This value will be use for the final iteration
-      t_in_end = ((in_rows - 1) * lcm) + t_in_start;
+    unsigned in_rows = (in_time - t_in_start) / num_steps_one_col;
+    if (t_in_end < (t_in_start + ((in_rows - 1) * num_steps_one_col))) {
+      // t_in_end is used to find the furthest time step was used in the MatMul calculation
+      // This value will be use for the final section of the processing
+      t_in_end = ((in_rows - 1) * num_steps_one_col) + t_in_start;
     }
     transposed_tiledMatMul(input_signal  + t_in_start * in_channels , tparams->W,  
       in_rows, ncols, out_channels, total_in_cols, ncols,
       temp_out, tparams->block_size);
     // Copy all the data into the output
-    for (unsigned t_iter = 0; t_iter < in_rows; t_iter++) {
-      memcpy(output_signal + (t_out + t_iter * num_iter) * out_channels,
-              temp_out + t_iter * out_channels, out_channels * sizeof(float));
+    float* output_offset = (float*)output_signal + t_out * out_channels;
+    float* temp_offset = (float*)temp_out;
+    unsigned t_iter = in_rows, offset_factor_for_out =  num_iter * out_channels;
+    while (t_iter--) {
+      memcpy(output_offset, temp_offset, out_channels * sizeof(float));
+      output_offset += offset_factor_for_out;
+      temp_offset += out_channels;
     }
   }
   // Initialize the time iterators outside the loop for readability
+  // Use the sotred value in t_in_end to calculate the iterators
   t_in_start = t_in_end + padding + stride; // Add the padding and stride offsets again
   t_in_end = t_in_start + kernel_size - 1;
   t_out = t_in_start / stride;
   for (; t_out < out_time; t_out++, t_in_start += stride, t_in_end += stride) {
     if (t_in_start < (in_time + padding) && (t_in_end >= (in_time + padding))) {
       // Filter partially exited the input
-      // In this case we using only a part of the weight matrix(assuming shape = out_channels, kernel_size * in_channels)
-      // As a part of the filter is outside the input, we need less than "kernel_size" time-steps
-      // Hence the number of columns needed reduces. But the whole matrix is a continuous piece of memory. So we need to discard/skip certain columns
-      // Hence we provide a separate row_stride to hop from one row to another
+      // As a part of the filter is outside the input, we need less than "kernel_size" time-steps. 
+      // We will only be using a part of the weight matrix(assuming shape = out_channels, kernel_size * in_channels)
+      // Hence we provide a separate row_stride paramemter to discard/skip certain columns in the weight matrix
       offset_matVec_conv1d(tparams->W,
         input_signal  + (t_in_start - padding) * in_channels, 
         out_channels, (in_time + padding - t_in_start) * in_channels, 
@@ -459,7 +410,7 @@ int conv1d_parallel(float* output_signal, unsigned out_time, unsigned out_channe
     }
     else if (t_in_start < (in_time + padding) && (t_in_end < (in_time + padding))) {
       // Filter fully in the input but very close to the edges. 
-      // Due to the lcm divisibility constrinat in the parallel step, these computations might be skipped
+      // Due to the num_steps_one_col divisibility usage in the parallel step, some computations would be skipped
       offset_matVec_conv1d(tparams->W,
         input_signal + (t_in_start - padding) * in_channels,
         out_channels, kernel_size * in_channels,
@@ -508,8 +459,8 @@ int avgpool1d(float* output_signal, unsigned out_time, const float* input_signal
   unsigned in_time, unsigned in_channels,
   unsigned padding, unsigned kernel_size, unsigned stride, unsigned activation) {
 
-  // Iterate over the time steps and average them. Similar to Conv1D_Dept with a filter kernel of ones
-  float scale = 1.0/(float)kernel_size;
+  // Iterate over the time steps and average them
+  float scale = 1.0/(float)kernel_size; // To avoid divisions
   for (unsigned t_in = 0, t_out = 0; t_out < out_time; t_out++, t_in += stride) {
     for (unsigned ci = 0; ci < in_channels; ci++) {
       float sum = 0;
@@ -550,7 +501,10 @@ int batchnorm1d(float* output_signal, float* input_signal,
   unsigned in_place, float eps) {
   float* ret = in_place ? (float*)input_signal : (float*)output_signal;
   
-  // Check if affine values was learnt
+  // Check for affine_config
+  // = 1 ; Use gamma, beta, mean and var
+  // = 2 ; Use only gamma and beta
+  // = 3 ; Use only mean and var
   if (affine_config == 1) {
     while (in_time--) {
       float* gamma_offset = (float*)gamma;

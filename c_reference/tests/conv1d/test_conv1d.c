@@ -102,7 +102,8 @@ void conv1d_lr_parallel_check() {
     .W2 = CONV1D_LR_CONV_W2,
     .B = CONV1D_LR_CONV_BIAS,
     .rank = CONV1D_LR_LOW_RANK,
-    .block_size = 100,
+    .block_size_to_lr = 100,
+    .block_size_from_lr = 100,
   };
   
   float* pred = (float*)malloc(CONV1D_LR_OUT_TIME 
