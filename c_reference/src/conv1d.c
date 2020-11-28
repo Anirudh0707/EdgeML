@@ -30,13 +30,14 @@ int conv1d_lr(float* output_signal, unsigned out_time, unsigned out_channels, co
     // 5) Filter fully outside the input
     if ((t_in_start >= padding) && (t_in_end < (in_time + padding))) {
       // Filter fully inside the input. Kept as the initial condition, since this is the most common one
-      offset_matVec_conv1d(tparams->W2, input_signal + (t_in_start - padding) * in_channels,
-              tparams->rank, kernel_size * in_channels,
-              kernel_size * in_channels, 1, 0, temp_rank_out);
+      offset_matVec_conv1d(tparams->W2,
+        input_signal + (t_in_start - padding) * in_channels,
+        tparams->rank, kernel_size * in_channels,
+        kernel_size * in_channels, 1, 0, temp_rank_out);
       // The row_stride and ncols are provided with the same value in the function call below and vec_stride = 1, depthwise = 0 
       // Hence, this call will be the same as a regular MatVec function call (without any scaling)
       offset_matVec_conv1d(tparams->W1, temp_rank_out, out_channels,
-              tparams->rank, tparams->rank, 1, 0, temp_out);
+        tparams->rank, tparams->rank, 1, 0, temp_out);
       memcpy(output_signal + t_index, temp_out, out_channels * sizeof(float));
     } 
     else if ((t_in_start < padding) && (t_in_end >= padding)) {
@@ -46,12 +47,13 @@ int conv1d_lr(float* output_signal, unsigned out_time, unsigned out_channels, co
       // Hence the number of columns needed reduces. But the whole matrix is a continuous piece of memory. So we need to discard/skip certain columns
       // Hence we provide a separate row_stride to hop from one row to another
       offset_matVec_conv1d(tparams->W2 + (padding - t_in_start) * in_channels, 
-                input_signal, tparams->rank, (t_in_end - padding + 1) * in_channels, 
-                kernel_size * in_channels, 1, 0, temp_rank_out);
+        input_signal, tparams->rank,
+        (t_in_end - padding + 1) * in_channels, 
+        kernel_size * in_channels, 1, 0, temp_rank_out);
       // The row_stride and ncols are provided with the same value in the function call below and vec_stride = 1, depthwise = 0 
       // Hence, this call will be the same as a regular MatVec function call (without any scaling)
       offset_matVec_conv1d(tparams->W1, temp_rank_out, out_channels,
-              tparams->rank, tparams->rank, 1, 0, temp_out); 
+        tparams->rank, tparams->rank, 1, 0, temp_out); 
       memcpy(output_signal + t_index, temp_out, out_channels * sizeof(float));
     }
     else if (t_in_start < (in_time + padding) && (t_in_end >= (in_time + padding))) {
@@ -60,13 +62,14 @@ int conv1d_lr(float* output_signal, unsigned out_time, unsigned out_channels, co
       // As a part of the filter is outside the input, we need less than "kernel_size" time-steps
       // Hence the number of columns needed reduces. But the whole matrix is a continuous piece of memory. So we need to discard/skip certain columns
       // Hence we provide a separate row_stride to hop from one row to another
-      offset_matVec_conv1d(tparams->W2, input_signal  + (t_in_start - padding) * in_channels, 
-                tparams->rank, (in_time + padding - t_in_start) * in_channels, 
-                kernel_size * in_channels, 1, 0, temp_rank_out);
+      offset_matVec_conv1d(tparams->W2,
+        input_signal  + (t_in_start - padding) * in_channels, 
+        tparams->rank, (in_time + padding - t_in_start) * in_channels, 
+        kernel_size * in_channels, 1, 0, temp_rank_out);
       // The row_stride and ncols are provided with the same value in the function call below and vec_stride = 1, depthwise = 0 
       // Hence, this call will be the same as a regular MatVec function call (without any scaling)
       offset_matVec_conv1d(tparams->W1, temp_rank_out, out_channels,
-              tparams->rank, tparams->rank, 1, 0, temp_out);
+        tparams->rank, tparams->rank, 1, 0, temp_out);
       memcpy(output_signal + t_index, temp_out, out_channels * sizeof(float));
     }
     else {
@@ -76,17 +79,34 @@ int conv1d_lr(float* output_signal, unsigned out_time, unsigned out_channels, co
     }
     for (unsigned co = 0; co < out_channels; co++) {
       // Post-Conv activation. More activation functions can be added should the necessity arise
-      if (activation == 1) {
-        output_signal[t_index + co] = sigmoid(output_signal[t_index + co] + tparams->B[co]);
-      }
-      else if (activation == 2) {
-        output_signal[t_index + co] = tanh(output_signal[t_index + co] + tparams->B[co]);
-      }
-      else if (activation == 3) {
-        output_signal[t_index + co] = relu(output_signal[t_index + co] + tparams->B[co]);
-      }
-      else {
-        output_signal[t_index + co] += tparams->B[co];
+      switch (activation) {
+        case 1 :
+          output_signal[t_index + co] = sigmoid(output_signal[t_index + co] +
+                                          tparams->B[co]);
+          break;
+
+        case 2 :
+          output_signal[t_index + co] = tanh(output_signal[t_index + co] +
+                                          tparams->B[co]);
+          break;
+        case 4 :
+          output_signal[t_index + co] = relu(output_signal[t_index + co] +
+                                          tparams->B[co]);
+          break;
+        
+        case 5 :
+          output_signal[t_index + co] = quantSigmoid(output_signal[t_index + co] +
+                                          tparams->B[co]);
+          break;
+
+        case 6 :
+          output_signal[t_index + co] = quantTanh(output_signal[t_index + co] +
+                                          tparams->B[co]);
+          break;
+
+        default :
+          output_signal[t_index + co] += tparams->B[co];
+          break;
       }
     }
   }
@@ -141,7 +161,8 @@ int conv1d_lr_parallel(float* output_signal, unsigned out_time, unsigned out_cha
         t_out++, t_in_start += stride, t_in_end += stride) {
     if (t_in_end < padding) {
       // Filter outside the input region and in the padded region
-      memset(output_signal + t_out * out_channels, 0, out_channels * sizeof(float));
+      memset(output_signal + t_out * out_channels, 0, 
+        out_channels * sizeof(float));
     } 
     else { //(t_in_end >= padding)
       // Filter partially entered the input
@@ -150,13 +171,14 @@ int conv1d_lr_parallel(float* output_signal, unsigned out_time, unsigned out_cha
       // Hence the number of columns needed reduces. But the whole matrix is a continuous piece of memory. So we need to discard/skip certain columns
       // Hence we provide a separate row_stride to hop from one row to another
       offset_matVec_conv1d(tparams->W2 + (padding - t_in_start) * in_channels, 
-                input_signal, rank, (t_in_end - padding + 1) * in_channels, 
-                kernel_size * in_channels, 1, 0, temp_rank_out);
+        input_signal, rank, (t_in_end - padding + 1) * in_channels, 
+        kernel_size * in_channels, 1, 0, temp_rank_out);
       // The row_stride and ncols are provided with the same value in the function call below and vec_stride = 1, depthwise = 0 
       // Hence, this call will be the same as a regular MatVec function call (without any scaling)
       offset_matVec_conv1d(tparams->W1, temp_rank_out, out_channels,
-              rank, rank, 1, 0, temp_out); 
-      memcpy(output_signal + t_out * out_channels, temp_out, out_channels * sizeof(float));
+        rank, rank, 1, 0, temp_out); 
+      memcpy(output_signal + t_out * out_channels, 
+        temp_out, out_channels * sizeof(float));
     }
   }
   // The main part, when the Filter is fully inside the input. We can think of the non-overlapping cases as parallel cases
@@ -174,17 +196,15 @@ int conv1d_lr_parallel(float* output_signal, unsigned out_time, unsigned out_cha
       t_in_end = ((in_rows - 1) * lcm) + t_in_start;
     }
     transposed_tiledMatMul(input_signal  + t_in_start * in_channels , tparams->W2,  
-                            in_rows, ncols, rank,
-                            total_in_cols, ncols,
-                            temp_rank_out, tparams->block_size);
+      in_rows, ncols, rank, total_in_cols, ncols,
+      temp_rank_out, tparams->block_size);
     transposed_tiledMatMul(temp_rank_out , tparams->W1,  
-                            in_rows, rank, out_channels,
-                            rank, rank,
-                            temp_out, tparams->block_size);
+      in_rows, rank, out_channels, rank, rank,
+      temp_out, tparams->block_size);
     // Copy all the data into the output
     for (unsigned t_iter = 0; t_iter < in_rows; t_iter++) {
       memcpy(output_signal + (t_out + t_iter * num_iter) * out_channels,
-              temp_out + t_iter * out_channels, out_channels * sizeof(float));
+        temp_out + t_iter * out_channels, out_channels * sizeof(float));
     }
   }
   // Initialize the time iterators outside the loop for readability
@@ -198,30 +218,35 @@ int conv1d_lr_parallel(float* output_signal, unsigned out_time, unsigned out_cha
       // As a part of the filter is outside the input, we need less than "kernel_size" time-steps
       // Hence the number of columns needed reduces. But the whole matrix is a continuous piece of memory. So we need to discard/skip certain columns
       // Hence we provide a separate row_stride to hop from one row to another
-      offset_matVec_conv1d(tparams->W2, input_signal  + (t_in_start - padding) * in_channels, 
-                rank, (in_time + padding - t_in_start) * in_channels, 
-                kernel_size * in_channels, 1, 0, temp_rank_out);
+      offset_matVec_conv1d(tparams->W2,
+        input_signal  + (t_in_start - padding) * in_channels, 
+        rank, (in_time + padding - t_in_start) * in_channels, 
+        kernel_size * in_channels, 1, 0, temp_rank_out);
       // The row_stride and ncols are provided with the same value in the function call below and vec_stride = 1, depthwise = 0 
       // Hence, this call will be the same as a regular MatVec function call (without any scaling)
       offset_matVec_conv1d(tparams->W1, temp_rank_out, out_channels,
-              rank, rank, 1, 0, temp_out);
-      memcpy(output_signal + t_out * out_channels, temp_out, out_channels * sizeof(float));
+        rank, rank, 1, 0, temp_out);
+      memcpy(output_signal + t_out * out_channels,
+        temp_out, out_channels * sizeof(float));
     }
     else if (t_in_start < (in_time + padding) && (t_in_end < (in_time + padding))) {
       // Filter fully in the input but very close to the edges. 
       // Due to the lcm divisibility constrinat in the parallel step, these computations might be skipped
-      offset_matVec_conv1d(tparams->W2, input_signal + (t_in_start - padding) * in_channels,
-              rank, kernel_size * in_channels,
-              kernel_size * in_channels, 1, 0, temp_rank_out);
+      offset_matVec_conv1d(tparams->W2,
+        input_signal + (t_in_start - padding) * in_channels,
+        rank, kernel_size * in_channels,
+        kernel_size * in_channels, 1, 0, temp_rank_out);
       // The row_stride and ncols are provided with the same value in the function call below and vec_stride = 1, depthwise = 0 
       // Hence, this call will be the same as a regular MatVec function call (without any scaling)
       offset_matVec_conv1d(tparams->W1, temp_rank_out, out_channels,
-              rank, rank, 1, 0, temp_out);
-      memcpy(output_signal + t_out * out_channels, temp_out, out_channels * sizeof(float));
+        rank, rank, 1, 0, temp_out);
+      memcpy(output_signal + t_out * out_channels,
+        temp_out, out_channels * sizeof(float));
     }
     else {
       // Filter completely outside the input and in the padding region
-      memset(output_signal + t_out * out_channels, 0, out_channels * sizeof(float));
+      memset(output_signal + t_out * out_channels,
+        0, out_channels * sizeof(float));
     }
   }
   // Bias and activation
@@ -229,17 +254,34 @@ int conv1d_lr_parallel(float* output_signal, unsigned out_time, unsigned out_cha
     unsigned t_index = t_out * out_channels;
     for (unsigned co = 0; co < out_channels; co++) {
       // Post-Conv activation. More activation functions can be added should the necessity arise
-      if (activation == 1) {
-        output_signal[t_index + co] = sigmoid(output_signal[t_index + co] + tparams->B[co]);
-      }
-      else if (activation == 2) {
-        output_signal[t_index + co] = tanh(output_signal[t_index + co] + tparams->B[co]);
-      }
-      else if (activation == 3) {
-        output_signal[t_index + co] = relu(output_signal[t_index + co] + tparams->B[co]);
-      }
-      else {
-        output_signal[t_index + co] += tparams->B[co];
+      switch (activation) {
+        case 1 :
+          output_signal[t_index + co] = sigmoid(output_signal[t_index + co] +
+                                          tparams->B[co]);
+          break;
+
+        case 2 :
+          output_signal[t_index + co] = tanh(output_signal[t_index + co] +
+                                          tparams->B[co]);
+          break;
+        case 4 :
+          output_signal[t_index + co] = relu(output_signal[t_index + co] +
+                                          tparams->B[co]);
+          break;
+        
+        case 5 :
+          output_signal[t_index + co] = quantSigmoid(output_signal[t_index + co] +
+                                          tparams->B[co]);
+          break;
+
+        case 6 :
+          output_signal[t_index + co] = quantTanh(output_signal[t_index + co] +
+                                          tparams->B[co]);
+          break;
+
+        default :
+          output_signal[t_index + co] += tparams->B[co];
+          break;
       }
     }
   }
@@ -273,9 +315,10 @@ int conv1d(float* output_signal, unsigned out_time, unsigned out_channels, const
     // 5) Filter fully outside the input
     if ((t_in_start >= padding) && (t_in_end < (in_time + padding))) {
       // Filter fully inside the input. Kept as the initial condition, since this is the most common one
-      offset_matVec_conv1d(tparams->W, input_signal + (t_in_start - padding) * in_channels,
-              out_channels, kernel_size * cols_scale,
-              kernel_size * cols_scale, vec_stride, tparams->depthwise, temp_out);
+      offset_matVec_conv1d(tparams->W,
+        input_signal + (t_in_start - padding) * in_channels,
+          out_channels, kernel_size * cols_scale,
+          kernel_size * cols_scale, vec_stride, tparams->depthwise, temp_out);
       memcpy(output_signal + t_index, temp_out, out_channels * sizeof(float));
     } 
     else if ((t_in_start < padding) && (t_in_end >= padding)) {
@@ -285,8 +328,8 @@ int conv1d(float* output_signal, unsigned out_time, unsigned out_channels, const
       // Hence the number of columns needed reduces. But the whole matrix is a continuous piece of memory. So we need to discard/skip certain columns
       // Hence we provide a separate row_stride to hop from one row to another
       offset_matVec_conv1d(tparams->W + (padding - t_in_start) * cols_scale, 
-                input_signal, out_channels, (t_in_end - padding + 1) * cols_scale,
-                kernel_size * cols_scale, vec_stride, tparams->depthwise, temp_out);
+        input_signal, out_channels, (t_in_end - padding + 1) * cols_scale,
+        kernel_size * cols_scale, vec_stride, tparams->depthwise, temp_out);
       memcpy(output_signal + t_index, temp_out, out_channels * sizeof(float));
     }
     else if (t_in_start < (in_time + padding) && (t_in_end >= (in_time + padding))) {
@@ -295,9 +338,10 @@ int conv1d(float* output_signal, unsigned out_time, unsigned out_channels, const
       // As a part of the filter is outside the input, we need less than "kernel_size" time-steps
       // Hence the number of columns needed reduces. But the whole matrix is a continuous piece of memory. So we need to discard/skip certain columns
       // Hence we provide a separate row_stride to hop from one row to another
-      offset_matVec_conv1d(tparams->W, input_signal  + (t_in_start - padding) * in_channels, 
-                out_channels, (in_time + padding - t_in_start) * cols_scale,
-                kernel_size * cols_scale, vec_stride, tparams->depthwise, temp_out);
+      offset_matVec_conv1d(tparams->W,
+        input_signal  + (t_in_start - padding) * in_channels, 
+        out_channels, (in_time + padding - t_in_start) * cols_scale,
+        kernel_size * cols_scale, vec_stride, tparams->depthwise, temp_out);
       memcpy(output_signal + t_index, temp_out, out_channels * sizeof(float));
     }
     else {
@@ -307,17 +351,34 @@ int conv1d(float* output_signal, unsigned out_time, unsigned out_channels, const
     }
     for (unsigned co = 0; co < out_channels; co++) {
       // Post-Conv activation. More activation functions can be added should the necessity arise
-      if (activation == 1) {
-        output_signal[t_index + co] = sigmoid(output_signal[t_index + co] + tparams->B[co]);
-      }
-      else if (activation == 2) {
-        output_signal[t_index + co] = tanh(output_signal[t_index + co] + tparams->B[co]);
-      }
-      else if (activation == 3) {
-        output_signal[t_index + co] = relu(output_signal[t_index + co] + tparams->B[co]);
-      }
-      else {
-        output_signal[t_index + co] += tparams->B[co];
+      switch (activation) {
+        case 1 :
+          output_signal[t_index + co] = sigmoid(output_signal[t_index + co] +
+                                          tparams->B[co]);
+          break;
+
+        case 2 :
+          output_signal[t_index + co] = tanh(output_signal[t_index + co] +
+                                          tparams->B[co]);
+          break;
+        case 4 :
+          output_signal[t_index + co] = relu(output_signal[t_index + co] +
+                                          tparams->B[co]);
+          break;
+        
+        case 5 :
+          output_signal[t_index + co] = quantSigmoid(output_signal[t_index + co] 
+                                          + tparams->B[co]);
+          break;
+
+        case 6 :
+          output_signal[t_index + co] = quantTanh(output_signal[t_index + co] +
+                                          tparams->B[co]);
+          break;
+
+        default :
+          output_signal[t_index + co] += tparams->B[co];
+          break;
       }
     }
   }
@@ -367,7 +428,8 @@ int conv1d_parallel(float* output_signal, unsigned out_time, unsigned out_channe
         t_out++, t_in_start += stride, t_in_end += stride) {
     if (t_in_end < padding) {
       // Filter outside the input region and in the padded region
-      memset(output_signal + t_out * out_channels, 0, out_channels * sizeof(float));
+      memset(output_signal + t_out * out_channels,
+        0, out_channels * sizeof(float));
     } 
     else { //(t_in_end >= padding)
       // Filter partially entered the input
@@ -375,10 +437,11 @@ int conv1d_parallel(float* output_signal, unsigned out_time, unsigned out_channe
       // As a part of the filter is outside the input, we need less than "kernel_size" time-steps
       // Hence the number of columns needed reduces. But the whole matrix is a continuous piece of memory. So we need to discard/skip certain columns
       // Hence we provide a separate row_stride to hop from one row to another
-      offset_matVec_conv1d(tparams->W + (padding - t_in_start) * in_channels, 
-                input_signal, out_channels, (t_in_end - padding + 1) * in_channels, 
-                ncols, 1, 0, temp_out);
-      memcpy(output_signal + t_out * out_channels, temp_out, out_channels * sizeof(float));
+      offset_matVec_conv1d(tparams->W + (padding - t_in_start) * in_channels,
+        input_signal, out_channels, (t_in_end - padding + 1) * in_channels,
+        ncols, 1, 0, temp_out);
+      memcpy(output_signal + t_out * out_channels,
+        temp_out, out_channels * sizeof(float));
     }
   }
   // The main part, when the Filter is fully inside the input. We can think of the non-overlapping cases as parallel cases
@@ -395,9 +458,8 @@ int conv1d_parallel(float* output_signal, unsigned out_time, unsigned out_channe
       t_in_end = ((in_rows - 1) * lcm) + t_in_start;
     }
     transposed_tiledMatMul(input_signal  + t_in_start * in_channels , tparams->W,  
-                            in_rows, ncols, out_channels,
-                            total_in_cols, ncols,
-                            temp_out, tparams->block_size);
+      in_rows, ncols, out_channels, total_in_cols, ncols,
+      temp_out, tparams->block_size);
     // Copy all the data into the output
     for (unsigned t_iter = 0; t_iter < in_rows; t_iter++) {
       memcpy(output_signal + (t_out + t_iter * num_iter) * out_channels,
@@ -415,22 +477,27 @@ int conv1d_parallel(float* output_signal, unsigned out_time, unsigned out_channe
       // As a part of the filter is outside the input, we need less than "kernel_size" time-steps
       // Hence the number of columns needed reduces. But the whole matrix is a continuous piece of memory. So we need to discard/skip certain columns
       // Hence we provide a separate row_stride to hop from one row to another
-      offset_matVec_conv1d(tparams->W, input_signal  + (t_in_start - padding) * in_channels, 
-                out_channels, (in_time + padding - t_in_start) * in_channels, 
-                ncols, 1, 0, temp_out);
-      memcpy(output_signal + t_out * out_channels, temp_out, out_channels * sizeof(float));
+      offset_matVec_conv1d(tparams->W,
+        input_signal  + (t_in_start - padding) * in_channels, 
+        out_channels, (in_time + padding - t_in_start) * in_channels, 
+        ncols, 1, 0, temp_out);
+      memcpy(output_signal + t_out * out_channels,
+        temp_out, out_channels * sizeof(float));
     }
     else if (t_in_start < (in_time + padding) && (t_in_end < (in_time + padding))) {
       // Filter fully in the input but very close to the edges. 
       // Due to the lcm divisibility constrinat in the parallel step, these computations might be skipped
-      offset_matVec_conv1d(tparams->W, input_signal + (t_in_start - padding) * in_channels,
-              out_channels, kernel_size * in_channels,
-              kernel_size * in_channels, 1, 0, temp_out);
-      memcpy(output_signal + t_out * out_channels, temp_out, out_channels * sizeof(float));
+      offset_matVec_conv1d(tparams->W,
+        input_signal + (t_in_start - padding) * in_channels,
+        out_channels, kernel_size * in_channels,
+        kernel_size * in_channels, 1, 0, temp_out);
+      memcpy(output_signal + t_out * out_channels,
+        temp_out, out_channels * sizeof(float));
     }
     else {
       // Filter completely outside the input and in the padding region
-      memset(output_signal + t_out * out_channels, 0, out_channels * sizeof(float));
+      memset(output_signal + t_out * out_channels,
+        0, out_channels * sizeof(float));
     }
   }
   // Bias and activation
@@ -438,17 +505,34 @@ int conv1d_parallel(float* output_signal, unsigned out_time, unsigned out_channe
     unsigned t_index = t_out * out_channels;
     for (unsigned co = 0; co < out_channels; co++) {
       // Post-Conv activation. More activation functions can be added should the necessity arise
-      if (activation == 1) {
-        output_signal[t_index + co] = sigmoid(output_signal[t_index + co] + tparams->B[co]);
-      }
-      else if (activation == 2) {
-        output_signal[t_index + co] = tanh(output_signal[t_index + co] + tparams->B[co]);
-      }
-      else if (activation == 3) {
-        output_signal[t_index + co] = relu(output_signal[t_index + co] + tparams->B[co]);
-      }
-      else {
-        output_signal[t_index + co] += tparams->B[co];
+      switch (activation) {
+        case 1 :
+          output_signal[t_index + co] = sigmoid(output_signal[t_index + co] +
+                                          tparams->B[co]);
+          break;
+
+        case 2 :
+          output_signal[t_index + co] = tanh(output_signal[t_index + co] +
+                                          tparams->B[co]);
+          break;
+        case 4 :
+          output_signal[t_index + co] = relu(output_signal[t_index + co] +
+                                          tparams->B[co]);
+          break;
+        
+        case 5 :
+          output_signal[t_index + co] = quantSigmoid(output_signal[t_index + co] +
+                                          tparams->B[co]);
+          break;
+
+        case 6 :
+          output_signal[t_index + co] = quantTanh(output_signal[t_index + co] +
+                                          tparams->B[co]);
+          break;
+
+        default :
+          output_signal[t_index + co] += tparams->B[co];
+          break;
       }
     }
   }
@@ -473,17 +557,29 @@ int avgpool1d(float* output_signal, unsigned out_time, const float* input_signal
           sum += (input_signal[((tf + t_in) - padding) * in_channels + ci]);
         }
       }
-      if (activation == 1) {
-        output_signal[t_out * in_channels + ci] = sigmoid(sum * scale);
-      }
-      else if (activation == 2) {
-        output_signal[t_out * in_channels + ci] = tanh(sum * scale);
-      }
-      else if (activation == 3) {
-        output_signal[t_out * in_channels + ci] = relu(sum * scale);
-      }
-      else {
-        output_signal[t_out * in_channels + ci] = sum * scale;
+      switch (activation) {
+        case 1 :
+          output_signal[t_out * in_channels + ci] = sigmoid(sum * scale);
+          break;
+
+        case 2 :
+          output_signal[t_out * in_channels + ci] = tanh(sum * scale);
+          break;
+        case 4 :
+          output_signal[t_out * in_channels + ci] = relu(sum * scale);
+          break;
+        
+        case 5 :
+          output_signal[t_out * in_channels + ci] = quantSigmoid(sum * scale);
+          break;
+
+        case 6 :
+          output_signal[t_out * in_channels + ci] = quantTanh(sum * scale);
+          break;
+
+        default :
+          output_signal[t_out * in_channels + ci] = sum * scale;
+          break;
       }
     }
   }
@@ -500,23 +596,79 @@ int batchnorm1d(float* output_signal, float* input_signal,
   // Check if affine values was learnt
   if (affine_config == 1) {
     while (in_time--) {
-      for (unsigned d = 0; d < in_channels; d++) {
-        *ret++ = gamma[d] * (((*input_signal++) - mean[d]) 
-                          / sqrt(var[d] + eps)) + beta[d];
+      float* gamma_offset = (float*)gamma;
+      float* beta_offset = (float*)beta;
+      float* mean_offset = (float*)mean;
+      float* var_offset = (float*)var;
+      unsigned channels = in_channels;
+
+      #ifdef LOOP_UNROLL
+        unsigned len_unroll = channels >> 2;
+        channels %= 4;
+        while (len_unroll--) {
+        *ret++ = (*gamma_offset++) * (((*input_signal++) - (*mean_offset++)) /
+                    sqrt((*var_offset++) + eps)) + (*beta_offset++);
+        *ret++ = (*gamma_offset++) * (((*input_signal++) - (*mean_offset++)) /
+                    sqrt((*var_offset++) + eps)) + (*beta_offset++);
+        *ret++ = (*gamma_offset++) * (((*input_signal++) - (*mean_offset++)) /
+                    sqrt((*var_offset++) + eps)) + (*beta_offset++);
+        *ret++ = (*gamma_offset++) * (((*input_signal++) - (*mean_offset++)) /
+                    sqrt((*var_offset++) + eps)) + (*beta_offset++);
+        }
+      #endif
+
+      while (channels--) {
+        *ret++ = (*gamma_offset++) * (((*input_signal++) - (*mean_offset++)) /
+                    sqrt((*var_offset++) + eps)) + (*beta_offset++);
       }
     }
   }
   else if (affine_config == 2) {
     while (in_time--) {
-      for (unsigned d = 0; d < in_channels; d++) {
-        *ret++ = (gamma[d] * (*input_signal++)) + beta[d];
+      float* gamma_offset = (float*)gamma;
+      float* beta_offset = (float*)beta;
+      unsigned channels = in_channels;
+
+      #ifdef LOOP_UNROLL
+        unsigned len_unroll = channels >> 2;
+        channels %= 4;
+        while (len_unroll--) {
+          *ret++ = ((*gamma_offset++) * (*input_signal++)) + (*beta_offset++);
+          *ret++ = ((*gamma_offset++) * (*input_signal++)) + (*beta_offset++);
+          *ret++ = ((*gamma_offset++) * (*input_signal++)) + (*beta_offset++);
+          *ret++ = ((*gamma_offset++) * (*input_signal++)) + (*beta_offset++);
+        }
+      #endif
+
+      while (channels--) {
+        *ret++ = ((*gamma_offset++) * (*input_signal++)) + (*beta_offset++);
       }
     }
   }
   else {
     while (in_time--) {
-      for (unsigned d = 0; d < in_channels; d++) {
-        *ret++ = ((*input_signal++) - mean[d]) / sqrt(var[d] + eps);
+      float* mean_offset = (float*)mean;
+      float* var_offset = (float*)var;
+      unsigned channels = in_channels;
+
+      #ifdef LOOP_UNROLL
+        unsigned len_unroll = channels >> 2;
+        channels %= 4;
+        while (len_unroll--) {
+          *ret++ = ((*input_signal++) - (*mean_offset++)) /
+                    sqrt((*var_offset++) + eps);
+          *ret++ = ((*input_signal++) - (*mean_offset++)) /
+                    sqrt((*var_offset++) + eps);
+          *ret++ = ((*input_signal++) - (*mean_offset++)) /
+                    sqrt((*var_offset++) + eps);
+          *ret++ = ((*input_signal++) - (*mean_offset++)) /
+                    sqrt((*var_offset++) + eps);
+        }
+      #endif
+      
+      while (channels--) {
+        *ret++ = ((*input_signal++) - (*mean_offset++)) /
+                  sqrt((*var_offset++) + eps);
       }
     }
   }

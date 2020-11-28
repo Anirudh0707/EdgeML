@@ -77,9 +77,11 @@ void offset_matVec_conv1d(const float* mat, const float* vec,
   unsigned depthwise, float* ret) {
 
   while (nrows--) {
-    float sum = 0.0f;
+    // For depthwise, the vec(input) pointer is updated 
+    // Since each row of the mat corresponds to a separate channel index
+    float* vec_offset = depthwise ? (float*)vec++ : (float*)vec;
     float* mat_offset = (float*)mat;
-    float* vec_offset = (float*)vec;
+    float sum = 0.0f;
     unsigned cols = ncols;
     
     #ifdef LOOP_UNROLL
@@ -103,11 +105,6 @@ void offset_matVec_conv1d(const float* mat, const float* vec,
     }
     *ret++ = sum;
     mat += row_stride;
-    // For depthwise, the vec(input) pointer is updated 
-    // Since each row of the mat corresponds to a separate channel index
-    if (depthwise) {
-      vec++;
-    }
   }
 }
 
