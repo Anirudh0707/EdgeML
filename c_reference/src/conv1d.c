@@ -7,8 +7,9 @@
 #include "conv1d.h"
 #include "utils.h"
 
-int conv1d_lr(float* output_signal, unsigned out_time, unsigned out_channels, const float* input_signal,
-  unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
+int conv1d_lr(float* output_signal, unsigned out_time, unsigned out_channels,
+  const float* input_signal, unsigned in_time, unsigned in_channels,
+  unsigned padding, unsigned kernel_size,
   const void* params, unsigned stride, unsigned activation) {
 
   const ConvLayers_LR_Params* tparams= (ConvLayers_LR_Params*) params;
@@ -96,8 +97,9 @@ int conv1d_lr(float* output_signal, unsigned out_time, unsigned out_channels, co
   return 0;
 }
 
-int conv1d_lr_parallel(float* output_signal, unsigned out_time, unsigned out_channels, const float* input_signal,
-  unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
+int conv1d_lr_parallel(float* output_signal, unsigned out_time, unsigned out_channels,
+  const float* input_signal, unsigned in_time, unsigned in_channels,
+  unsigned padding, unsigned kernel_size,
   const void* params, unsigned stride, unsigned activation) {
 
   unsigned ncols = kernel_size * in_channels, num_iter = 0, num_steps_one_row = 0;
@@ -112,7 +114,10 @@ int conv1d_lr_parallel(float* output_signal, unsigned out_time, unsigned out_cha
   // Perform the convolution. Zero-pad is from 0 to padding and in_time + padding to in_time + 2 * padding
   // Buffer to hold the output. For corner cases, this will be realtively big. 
   // But will be needed for the central condition (filter inside input).
-  unsigned buffer_steps = in_time / num_steps_one_row, rank = tparams->rank;
+  // If there are not enough time steps to linearise into one row, then allocate only 1 time step
+  unsigned buffer_steps = ((in_time / num_steps_one_row) > 1) ? 
+                            in_time / num_steps_one_row : 1;
+  unsigned rank = tparams->rank;
   // Buffer for W2 out
   float* temp_rank_out = (float*)malloc(buffer_steps * rank * sizeof(float));
   // Buffer for W1 out
@@ -147,9 +152,9 @@ int conv1d_lr_parallel(float* output_signal, unsigned out_time, unsigned out_cha
   // Hence we use the num_steps_one_row for calculating the number of time steps to be linearized in one row
   // Using the above logic, we can convert the MatVec opeartion into a MatMul operation
   // Ideally both implementation would be the same. However for edge devices the matMul was found to be faster matVec (both tilied)
-  // Skip if atleast 2 rows cannot be formed. The condition 2 * (kernel_size + stride) is the worst case criteria to form 2 rows
+  // Skip if atleast 2 rows cannot be formed. The condition 2 * num_steps_one_row + stride is the worst case criteria
   // The MatVec will be used for the computation in-case the following block is skipped
-  if (in_time > ((kernel_size + stride) << 1)) {
+  if (in_time > ((num_steps_one_row << 1) + stride)) {
     t_in_start -= padding; // remove the padding offset temporarily
     t_in_end -= padding; // Used to keep track of the final processed index
     for (unsigned iter = 0; (iter < num_iter) && (t_out < out_channels);
@@ -251,8 +256,9 @@ int conv1d_lr_parallel(float* output_signal, unsigned out_time, unsigned out_cha
   return 0;
 }
 
-int conv1d(float* output_signal, unsigned out_time, unsigned out_channels, const float* input_signal,
-  unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
+int conv1d(float* output_signal, unsigned out_time, unsigned out_channels,
+  const float* input_signal, unsigned in_time, unsigned in_channels,
+  unsigned padding, unsigned kernel_size,
   const void* params, unsigned stride, unsigned activation) {
 
   const ConvLayers_Params* tparams= (ConvLayers_Params*) params;
@@ -331,8 +337,9 @@ int conv1d(float* output_signal, unsigned out_time, unsigned out_channels, const
   return 0;
 }
 
-int conv1d_parallel(float* output_signal, unsigned out_time, unsigned out_channels, const float* input_signal,
-  unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
+int conv1d_parallel(float* output_signal, unsigned out_time, unsigned out_channels,
+  const float* input_signal, unsigned in_time, unsigned in_channels,
+  unsigned padding, unsigned kernel_size,
   const void* params, unsigned stride, unsigned activation) {
   
   unsigned ncols = kernel_size * in_channels, num_iter = 0, num_steps_one_row = 0;
@@ -347,7 +354,9 @@ int conv1d_parallel(float* output_signal, unsigned out_time, unsigned out_channe
   // Perform the Convolution. Pad is from 0 to padding and in_time + padding to in_time + 2 * padding
   // Buffer to hold the output. For corner cases, this will be realtively big. 
   // But will be needed for the central condition (filter inside input).
-  unsigned buffer_steps = in_time / num_steps_one_row;
+  // If there are not enough time steps to linearise into one row, then allocate only 1 time step
+  unsigned buffer_steps = ((in_time / num_steps_one_row) > 1) ? 
+                            in_time / num_steps_one_row : 1;
   float* temp_out = (float*)malloc(buffer_steps * out_channels * sizeof(float));
   unsigned t_in_start, t_in_end, t_out; // Values are needed outside the loops. Hence declared here
   for (t_in_start = 0, t_in_end = kernel_size - 1, t_out = 0; 
@@ -375,9 +384,9 @@ int conv1d_parallel(float* output_signal, unsigned out_time, unsigned out_channe
   // Hence we use the num_steps_one_row for calculating the number of time steps to be linearized in one row
   // Using the above logic, we can convert the MatVec opeartion into a MatMul operation
   // Ideally both implementation would be the same. However for edge devices the matMul was found to be faster matVec (both tilied)
-  // Skip if atleast 2 rows cannot be formed. The condition 2 * (kernel_size + stride) is the worst case criteria to form 2 rows
+  // Skip if atleast 2 rows cannot be formed. The condition 2 * num_steps_one_row + stride is the worst case criteria
   // The MatVec will be used for the computation in-case the following block is skipped
-  if (in_time > ((kernel_size + stride) << 1)) {
+  if (in_time > ((num_steps_one_row << 1) + stride)) {
     t_in_start -= padding; // remove the padding offset temporarily
     t_in_end -= padding; // Used to keep track of the final processed index
     for (unsigned iter = 0; (iter < num_iter) && (t_out < out_channels);

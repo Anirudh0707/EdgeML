@@ -8,7 +8,7 @@
 
    NOTES for the conv layers
 -> The conv1d & conv1d_lr layers work for all cases and can be used unconstrained. 
-   There are no hard constraints for the parallel version, but a points regarding the optimal usage are given below
+   There are no hard constraints for the parallel version, but a few points regarding its optimal usage are given below
 -> Dilation = 1 (no dilation) for all cases
 -> For the non-depthwise cases, store the matrices as described below. Permutation might be necessary
 -> The low-rank decomposition cannot be applied to the depthwise weight matrices. This is due to the out_channels/in_channels = 0 constarint imposed by the depthwise convolution. 
@@ -22,10 +22,10 @@
 
    Important points regarding parallel versions
 -> Due to the above reason, the parallel layers is only recommended for large in_time inputs
-   This should typically be for in_time (without the padding) > 2 * (kernel_size + stride). Else there would not be enough time-steps to efficiently parallelize
-   For other shorter input cases, the code will skip the MatMul computation and use MatVec instead (but the MatMul-variable computation overhead would remain)
-   For such cases, the MatVec code (conv1d and conv1d_lr) would work more efficiently 
-   The RAM usage would be lower and the function would not have any overheads (calculation of the iterators and MatMul-auxiliary variables)
+   This should typically be for in_time (without the padding) > 2 * num_steps_one_row + stride. Else there would not be enough time-steps to efficiently parallelise
+   We need at least 2 rows for a good a MatMul performace. In the worst case the starting time step would be (stride - 1). Hence we choose 2 * num_steps_one_row + stride as the threshold
+   For the short input cases, the code will skip the MatMul computation and use MatVec instead (but the MatMul-variable computation overhead would remain)
+   For such cases, the MatVec code (conv1d and conv1d_lr) would work more efficiently due to the lower RAM usage and lack of any major overheads
 -> There is no support for depthwise for conv1d_parallel
    The regular convolution acts on all the channels while the depthwise acts only on one channel at a time
    This results in a non-contiguos memory access. MatMul would need to process multiple such time-steps, while the MatVec would only need to process one
@@ -66,8 +66,9 @@ typedef struct ConvLayers_Params {
  *                                2: tanh
  *                                3: relu
  */
-int conv1d(float* output_signal, unsigned out_time, unsigned out_channels, const float* input_signal,
-  unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
+int conv1d(float* output_signal, unsigned out_time, unsigned out_channels,
+  const float* input_signal, unsigned in_time, unsigned in_channels,
+  unsigned padding, unsigned kernel_size,
   const void* params, unsigned stride, unsigned activation);
 
 /**
@@ -102,8 +103,9 @@ typedef struct ConvLayers_Parallel_Params {
  *                                2: tanh
  *                                3: relu
  */
-int conv1d_parallel(float* output_signal, unsigned out_time, unsigned out_channels, const float* input_signal,
-  unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
+int conv1d_parallel(float* output_signal, unsigned out_time, unsigned out_channels,
+  const float* input_signal, unsigned in_time, unsigned in_channels,
+  unsigned padding, unsigned kernel_size,
   const void* params, unsigned stride, unsigned activation);
 
 /**
@@ -141,8 +143,9 @@ typedef struct ConvLayers_LR_Params {
  *                                2: tanh
  *                                3: relu
  */
-int conv1d_lr(float* output_signal, unsigned out_time, unsigned out_channels, const float* input_signal,
-  unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
+int conv1d_lr(float* output_signal, unsigned out_time, unsigned out_channels,
+  const float* input_signal, unsigned in_time, unsigned in_channels,
+  unsigned padding, unsigned kernel_size,
   const void* params, unsigned stride, unsigned activation);
 
 /**
@@ -184,8 +187,9 @@ typedef struct ConvLayers_LR_Parallel_Params {
  *                                2: tanh
  *                                3: relu
  */
-int conv1d_lr_parallel(float* output_signal, unsigned out_time, unsigned out_channels, const float* input_signal,
-  unsigned in_time, unsigned in_channels, unsigned padding, unsigned kernel_size,
+int conv1d_lr_parallel(float* output_signal, unsigned out_time, unsigned out_channels,
+  const float* input_signal, unsigned in_time, unsigned in_channels,
+  unsigned padding, unsigned kernel_size,
   const void* params, unsigned stride, unsigned activation);
 
 // Auxiliary Layers
